@@ -11,13 +11,16 @@
                 <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;opacity:0.8">Parking Ticket</div>
                 <div style="font-size:22px;font-weight:800;margin:6px 0">{{ $ticket->vehicle->plate_number ?? 'No plate' }}</div>
                 <x-type-badge :type="$ticket->vehicle->vehicle_type" />
+                @if(str_starts_with($ticket->vehicle->plate_number ?? '', 'BIKE-'))
+                    <div style="font-size:11px;opacity:0.8;margin-top:4px">Auto-assigned Bike ID</div>
+                @endif
             </div>
             <div class="card-ios-p">
                 <div class="grouped" style="border:none;margin:0">
                     <div class="grouped-row"><span class="row-label"><i class="bi bi-hash me-1"></i>Ticket ID</span><span class="row-val">{{ $ticket->ticket_id }}</span></div>
                     <div class="grouped-row"><span class="row-label"><i class="bi bi-geo-alt-fill me-1"></i>Slot</span><span class="row-val">{{ $ticket->slot->slot_number }}</span></div>
-                    <div class="grouped-row"><span class="row-label"><i class="bi bi-clock-fill me-1"></i>Entry Time</span><span class="row-val">{{ \Carbon\Carbon::parse($ticket->entry_time)->format('M d, g:i A') }}</span></div>
-                    @if (auth()->user()->isAdmin())
+                    <div class="grouped-row"><span class="row-label"><i class="bi bi-clock-fill me-1"></i>Entry Time</span><span class="row-val">{{ \Carbon\Carbon::parse($ticket->entry_time)->format('M d, Y g:i A') }}</span></div>
+                    @if(auth()->user()->isAdmin())
                         <div class="grouped-row"><span class="row-label"><i class="bi bi-person-fill me-1"></i>Processed by</span><span class="row-val">{{ $ticket->staff->full_name ?? 'N/A' }}</span></div>
                     @endif
                 </div>
@@ -26,7 +29,12 @@
         </div>
 
         <div class="d-flex gap-3 mt-4">
-            <a href="{{ route('dashboard') }}" class="ios-btn btn-primary-ios flex-fill"><i class="bi bi-house-fill me-1"></i> Dashboard</a>
+            <a href="{{ route('checkin.print', $ticket->ticket_id) }}" target="_blank" class="ios-btn btn-ghost flex-fill">
+                <i class="bi bi-printer-fill me-1"></i> Print / Save PDF
+            </a>
+            <a href="{{ route('dashboard') }}" class="ios-btn btn-primary-ios flex-fill">
+                <i class="bi bi-house-fill me-1"></i> Dashboard
+            </a>
         </div>
         <a href="{{ route('checkin.index') }}" style="color:var(--blue);font-size:14px;font-weight:600;display:inline-block;margin-top:16px">Check in another vehicle</a>
     </div>

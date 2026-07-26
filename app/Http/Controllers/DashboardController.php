@@ -2,61 +2,57 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\DB;
+use App\Models\Ticket;
+use App\Models\Payment;
+use App\Models\ParkingSlot;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $totalSlots = DB::table('parking_slots')->count();
-        $occupied = DB::table('parking_slots')->where('status', 'occupied')->count();
-        $available = DB::table('parking_slots')->where('status', 'available')->count();
-        $maintenance = DB::table('parking_slots')->where('status', 'maintenance')->count();
+        $period = $request->input('period', 'today');
+        $now    = now();
 
-        $todayRevenue = DB::table('payments')
-            ->whereDate('paid_at', today())
-            ->sum('total_fee');
+        $periodStart = match($period) {
+            'week'  => $now->copy()->startOfWeek(),
+            'month' => $now->copy()->startOfMonth(),
+            'year'  => $now->copy()->startOfYear(),
+            default => $now->copy()->startOfDay(),
+        };
 
-        $todayTransactions = DB::table('payments')
-            ->whereDate('paid_at', today())
-            ->count();
+        $allSlots   = ParkingSlot::all();
+        $totalSlots = $allSlots->count();
 
-        $activeTickets = DB::table('tickets')
-            ->where('status', 'active')
-            ->count();
+        $activeTickets = Ticket::where('status', 'active')->with('vehicle', 'slot')->get();
+        $occupied    = $activeTickets->count();
+        $maintenance = $allSlots->where('status', 'maintenance')->count();
+        $available   = $totalSlots - $occupied - $maintenance;
 
-        $recentActivity = DB::table('tickets')
-            ->join('vehicles', 'tickets.vehicle_id', '=', 'vehicles.vehicle_id')
-            ->join('parking_slots', 'tickets.slot_id', '=', 'parking_slots.slot_id')
-            ->where('tickets.status', 'active')
-            ->orderBy('tickets.entry_time', 'desc')
-            ->limit(5)
-            ->select(
-                'vehicles.plate_number',
-                'vehicles.vehicle_type',
-                'parking_slots.slot_number',
-                'tickets.entry_time',
-                'tickets.status'
-            )
-            ->get();
-
-        $hourlyTraffic = DB::table('tickets')
-            ->whereDate('entry_time', today())
-            ->selectRaw('HOUR(entry_time) as hour, COUNT(*) as count')
-            ->groupByRaw('HOUR(entry_time)')
-            ->orderBy('hour')
-            ->pluck('count', 'hour')
-            ->toArray();
+        $periodRevenue      = Payment::where('paid_at', '>=', $periodStart)->sum('total_fee');
+        $periodTransactions = Payment::where('paid_at', '>=', $periodStart)->count();
 
         $trafficData = [];
-        for ($h = 6; $h <= 19; $h++) {
-            $trafficData[$h] = $hourlyTraffic[$h] ?? 0;
+        for ($h = 0; $h < 24; $h++) {
+$trafficData[$h] = Ticket::whereDate('entry_time', $now->toDateString())
+                ->whereRaw('HOUR(entry_time) = ?', [$h])
+                ->count();
         }
+
+        $recentActivity = $activeTickets->take(6)->map(function ($ticket) {
+            return (object)[
+                'plate_number' => $ticket->vehicle->plate_number,
+                'vehicle_type' => $ticket->vehicle->vehicle_type,
+                'entry_time'   => $ticket->entry_time,
+                'slot_number'  => $ticket->slot->slot_number ?? 'N/A',
+            ];
+        });
 
         return view('dashboard', compact(
             'totalSlots', 'occupied', 'available', 'maintenance',
-            'todayRevenue', 'todayTransactions', 'activeTickets',
-            'recentActivity', 'trafficData'
+            'periodRevenue', 'periodTransactions',
+            'activeTickets', 'trafficData', 'recentActivity', 'period'
         ));
     }
 }

@@ -25,23 +25,36 @@
     </div>
 
     <div class="section-hdr">Currently Parked ({{ $parkedVehicles->count() }})</div>
-    <div class="row g-3">
-        @foreach ($parkedVehicles as $ticket)
-            <div class="col-md-4">
-                <a href="{{ route('checkout.payment', $ticket->ticket_id) }}" class="card-ios card-ios-p d-block" style="transition:all 0.15s">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <div style="font-size:16px;font-weight:700;color:var(--label)">{{ $ticket->vehicle->plate_number ?? 'No plate' }}</div>
-                            <x-type-badge :type="$ticket->vehicle->vehicle_type" />
-                            <div style="font-size:12px;color:var(--gray);margin-top:6px"><i class="bi bi-geo-alt-fill me-1"></i>{{ $ticket->slot->slot_number }} · {{ \Carbon\Carbon::parse($ticket->entry_time)->format('M d, g:i A') }}</div>
-                            @if(auth()->user()->isAdmin() && $ticket->staff)
-                                <div style="font-size:11px;color:var(--gray2);margin-top:2px"><i class="bi bi-person-fill me-1"></i>{{ $ticket->staff->full_name }}</div>
-                            @endif
-                        </div>
-                        <div style="font-size:20px;font-weight:800;color:var(--blue)">${{ number_format($ticket->calculated_fee,2) }}</div>
-                    </div>
-                </a>
+    @if($parkedVehicles->isEmpty())
+        <div class="card-ios card-ios-p text-center py-5">
+            <div style="width:56px;height:56px;border-radius:50%;background:var(--gray6);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
+                <i class="bi bi-car-front" style="font-size:24px;color:var(--gray2)"></i>
             </div>
-        @endforeach
-    </div>
+            <div style="font-size:15px;font-weight:600;color:var(--label2)">No vehicles parked</div>
+            <div style="font-size:13px;color:var(--gray);margin-top:4px">All parking slots are currently free</div>
+        </div>
+    @else
+        <div class="row g-3">
+            @foreach ($parkedVehicles as $ticket)
+                <div class="col-md-4">
+                    <a href="{{ route('checkout.payment', $ticket->ticket_id) }}" class="card-ios card-ios-p d-block" style="transition:all 0.15s">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div style="font-size:16px;font-weight:700;color:var(--label)">{{ $ticket->vehicle->plate_number ?? 'No plate' }}</div>
+                                <x-type-badge :type="$ticket->vehicle->vehicle_type" />
+                                <div style="font-size:12px;color:var(--gray);margin-top:6px">
+                                    <i class="bi bi-geo-alt-fill me-1"></i>{{ $ticket->slot->slot_number }}
+                                    &middot; {{ \Carbon\Carbon::parse($ticket->entry_time)->format('M d, g:i A') }}
+                                </div>
+                                @if(auth()->user()->isAdmin() && $ticket->staff)
+                                    <div style="font-size:11px;color:var(--gray2);margin-top:2px"><i class="bi bi-person-fill me-1"></i>{{ $ticket->staff->full_name }}</div>
+                                @endif
+                            </div>
+                            <div style="font-size:20px;font-weight:800;color:var(--blue)">${{ number_format($ticket->calculated_fee,2) }}</div>
+                        </div>
+                    </a>
+                </div>
+            @endforeach
+        </div>
+    @endif
 </x-layout>

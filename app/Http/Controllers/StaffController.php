@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Staff;
+use App\Models\Ticket;
+use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -15,10 +17,10 @@ class StaffController extends Controller
         $query = Staff::orderBy('created_at', 'asc');
         if ($request->filled('search')) {
             $s = $request->search;
-            $query->where(fn($q) => $q->where('full_name','like','%'.$s.'%')->orWhere('username','like','%'.$s.'%'));
+            $query->where(fn($q) => $q->where('full_name', 'like', '%'.$s.'%')->orWhere('username', 'like', '%'.$s.'%'));
         }
         $staffMembers = $query->get();
-        $activeCount = Staff::where('status', 'active')->count();
+        $activeCount  = Staff::where('status', 'active')->count();
         return view('staff.index', compact('staffMembers', 'activeCount'));
     }
 
@@ -60,7 +62,17 @@ class StaffController extends Controller
 
     public function show(Staff $staff)
     {
-        return view('staff.show', compact('staff'));
+        $checkIns  = Ticket::where('staff_id', $staff->staff_id)->count();
+        $checkOuts = Payment::where('staff_id', $staff->staff_id)->count();
+        $revenue   = Payment::where('staff_id', $staff->staff_id)->sum('total_fee');
+
+        $recentActivity = Ticket::where('staff_id', $staff->staff_id)
+            ->with('vehicle', 'slot', 'payment')
+            ->orderBy('entry_time', 'desc')
+            ->take(10)
+            ->get();
+
+        return view('staff.show', compact('staff', 'checkIns', 'checkOuts', 'revenue', 'recentActivity'));
     }
 
     public function edit(Staff $staff)
@@ -83,9 +95,7 @@ class StaffController extends Controller
         $data = $request->only('username', 'full_name', 'gender', 'role', 'phone_number', 'date_of_birth');
 
         if ($request->hasFile('profile_image')) {
-            if ($staff->profile_image) {
-                Storage::disk('public')->delete($staff->profile_image);
-            }
+            if ($staff->profile_image) Storage::disk('public')->delete($staff->profile_image);
             $data['profile_image'] = $request->file('profile_image')->store('profiles', 'public');
         }
 
@@ -93,11 +103,29 @@ class StaffController extends Controller
         return redirect()->route('staff.show', $staff)->with('success', 'Staff updated.');
     }
 
+    public function resetPassword(Staff $staff)
+    {
+        $staff->update(['password_hash' => Hash::make('password')]);
+        return redirect()->route('staff.show', $staff)->with('success', $staff->full_name . "'s password reset to \"password\".");
+    }
+
+    public function destroy(Staff $staff)
+    {
+        if ($staff->staff_id === auth()->id()) {
+            return redirect()->route('staff.index')->with('error', 'You cannot delete your own account.');
+        }
+        if ($staff->profile_image) {
+            Storage::disk('public')->delete($staff->profile_image);
+        }
+        $staff->delete();
+        return redirect()->route('staff.index')->with('success', $staff->full_name . ' has been permanently removed.');
+    }
+
     public function toggleStatus(Staff $staff)
     {
         $newStatus = $staff->status === 'active' ? 'deactivated' : 'active';
         $staff->update(['status' => $newStatus]);
-        $msg = $staff->full_name . ($newStatus === 'active' ? ' activated.' : ' deactivated.');
-        return redirect()->route('staff.index')->with('success', $msg);
+        return redirect()->route('staff.index')
+            ->with('success', $staff->full_name . ($newStatus === 'active' ? ' activated.' : ' deactivated.'));
     }
 }

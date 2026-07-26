@@ -40,14 +40,14 @@
 
         @if ($isAdmin)
             <div class="nav-section">Admin</div>
-<a href="{{ route('reports.index') }}" class="nav-link {{ str_starts_with($r, 'reports.') ? 'active' : '' }}">
-    <i class="bi bi-bar-chart-fill"></i> Reports
-    <i class="bi bi-patch-check-fill ms-auto" style="font-size:14px;color:var(--blue);opacity:0.85"></i>
-</a>
-<a href="{{ route('staff.index') }}" class="nav-link {{ str_starts_with($r, 'staff.') ? 'active' : '' }}">
-    <i class="bi bi-people-fill"></i> Staff
-    <i class="bi bi-patch-check-fill ms-auto" style="font-size:14px;color:var(--blue);opacity:0.85"></i>
-</a>
+            <a href="{{ route('reports.index') }}" class="nav-link {{ str_starts_with($r, 'reports.') ? 'active' : '' }}">
+                <i class="bi bi-bar-chart-fill"></i> Reports
+                <i class="bi bi-patch-check-fill ms-auto" style="font-size:14px;color:var(--blue);opacity:0.85"></i>
+            </a>
+            <a href="{{ route('staff.index') }}" class="nav-link {{ str_starts_with($r, 'staff.') ? 'active' : '' }}">
+                <i class="bi bi-people-fill"></i> Staff
+                <i class="bi bi-patch-check-fill ms-auto" style="font-size:14px;color:var(--blue);opacity:0.85"></i>
+            </a>
         @endif
 
         <div class="nav-section">Account</div>

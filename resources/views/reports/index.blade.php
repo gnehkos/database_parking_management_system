@@ -1,5 +1,10 @@
 <x-layout title="Reports">
-    <div class="page-header"><div class="page-title">Reports & Analytics</div><div class="page-sub">Revenue and traffic insights</div></div>
+    <div class="page-header d-flex justify-content-between align-items-center">
+        <div><div class="page-title">Reports & Analytics</div><div class="page-sub">Revenue and traffic insights</div></div>
+        <a href="{{ route('reports.export', request()->query()) }}" class="ios-btn btn-ghost btn-sm-ios">
+            <i class="bi bi-download me-1"></i> Export CSV
+        </a>
+    </div>
 
     <div class="d-flex gap-2 flex-wrap mb-3 align-items-center">
         <div class="filter-pills">

@@ -12,7 +12,7 @@
             <div class="grouped-row"><span class="row-label">Exit Time</span><span class="row-val">{{ \Carbon\Carbon::parse($ticket->exit_time)->format('M d, g:i A') }}</span></div>
             <div class="grouped-row"><span class="row-label">Payment Method</span><span class="row-val">{{ ucfirst($ticket->payment->payment_method) }}</span></div>
             @if(auth()->user()->isAdmin())
-                <div class="grouped-row"><span class="row-label">Processed by</span><span class="row-val">{{ $ticket->payment->staff->full_name ?? 'N/A' }}</span></div>
+                <div class="grouped-row"><span class="row-label">Processed by</span><span class="row-val">{{ $ticket->staff->full_name ?? 'N/A' }}</span></div>
             @endif
             <div class="grouped-row"><span class="row-label">Amount Paid</span><span style="font-size:20px;font-weight:800;color:var(--green)">${{ number_format($ticket->payment->total_fee,2) }}</span></div>
         </div>

@@ -8,7 +8,8 @@ $zoneColors = [
 ];
 $vc = $zoneColors[$slot->zone->vehicle_type] ?? $zoneColors['car'];
 $statusColor = match($slot->real_status) { 'occupied'=>'var(--red)', 'maintenance'=>'var(--orange)', default=>'var(--green)' };
-$statusBg = match($slot->real_status) { 'occupied'=>'rgba(255,59,48,0.1)', 'maintenance'=>'rgba(255,149,0,0.1)', default=>'rgba(52,199,89,0.1)' };
+$statusBg    = match($slot->real_status) { 'occupied'=>'rgba(255,59,48,0.1)', 'maintenance'=>'rgba(255,149,0,0.1)', default=>'rgba(52,199,89,0.1)' };
+$slotBg      = match($slot->real_status) { 'occupied'=>'linear-gradient(135deg,#ff3b30,#c0392b)', 'maintenance'=>'linear-gradient(135deg,#ff9500,#e67e22)', default=>'linear-gradient(135deg,'.$vc['color'].','.$vc['color'].'cc)' };
 @endphp
 
 <div class="d-flex align-items-center gap-3 mb-4">
@@ -19,8 +20,8 @@ $statusBg = match($slot->real_status) { 'occupied'=>'rgba(255,59,48,0.1)', 'main
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-md-5">
-        <div style="background:{{ match($slot->real_status){'occupied'=>'linear-gradient(135deg,#ff3b30,#c0392b)','maintenance'=>'linear-gradient(135deg,#ff9500,#e67e22)',default=>'linear-gradient(135deg,'.$vc['color'].','.($vc['color']).')' } }};border-radius:20px;padding:32px;text-align:center;color:#fff;position:relative;overflow:hidden">
+    <div class="col-md-4">
+        <div style="background:{{ $slotBg }};border-radius:20px;padding:32px;text-align:center;color:#fff;position:relative;overflow:hidden">
             <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.08)"></div>
             <div style="position:absolute;bottom:-30px;left:-10px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.06)"></div>
             <div style="font-size:52px;font-weight:900;letter-spacing:-2px;line-height:1;position:relative">{{ $slot->slot_number }}</div>
@@ -28,7 +29,7 @@ $statusBg = match($slot->real_status) { 'occupied'=>'rgba(255,59,48,0.1)', 'main
             <div style="font-size:11px;opacity:0.7;margin-top:4px">{{ $slot->zone->zone_name }}</div>
         </div>
     </div>
-    <div class="col-md-7">
+    <div class="col-md-8">
         @if ($activeTicket)
             <div style="border:2px solid var(--red);border-radius:16px;padding:20px;background:rgba(255,59,48,0.03);margin-bottom:12px">
                 <div class="d-flex justify-content-between align-items-start mb-3">
@@ -37,9 +38,21 @@ $statusBg = match($slot->real_status) { 'occupied'=>'rgba(255,59,48,0.1)', 'main
                         <div style="font-size:22px;font-weight:800">{{ $activeTicket->vehicle->plate_number ?? 'No plate' }}</div>
                         <x-type-badge :type="$activeTicket->vehicle->vehicle_type" />
                     </div>
-                    <a href="{{ route('checkout.payment', $activeTicket->ticket_id) }}" class="ios-btn btn-sm-ios" style="background:var(--red);color:#fff;flex-shrink:0">
-                        <i class="bi bi-arrow-up-right-circle-fill me-1"></i>Check Out
-                    </a>
+                    <div class="d-flex flex-column gap-2">
+                        <a href="{{ route('checkout.payment', $activeTicket->ticket_id) }}" class="ios-btn btn-sm-ios" style="background:var(--red);color:#fff">
+                            <i class="bi bi-arrow-up-right-circle-fill me-1"></i>Check Out
+                        </a>
+                        @if(auth()->user()->isAdmin())
+                            <button class="ios-btn btn-danger-ios btn-sm-ios" data-bs-toggle="modal" data-bs-target="#confirmModal"
+                                data-title="Cancel Ticket"
+                                data-message="Cancel ticket {{ $activeTicket->ticket_id }} and free this slot? No payment will be recorded."
+                                data-form-id="cancel-ticket-{{ $activeTicket->ticket_id }}"
+                                data-action="Cancel Ticket" data-danger="1">
+                                <i class="bi bi-x-circle-fill me-1"></i>Void
+                            </button>
+                            <form id="cancel-ticket-{{ $activeTicket->ticket_id }}" method="POST" action="{{ route('tickets.cancel', $activeTicket->ticket_id) }}" style="display:none">@csrf</form>
+                        @endif
+                    </div>
                 </div>
                 <div class="row g-2">
                     @php
@@ -101,10 +114,7 @@ $statusBg = match($slot->real_status) { 'occupied'=>'rgba(255,59,48,0.1)', 'main
         <span style="font-size:16px;font-weight:700">Usage History</span>
     </div>
     @forelse ($usageHistory as $ticket)
-        @php
-            $d = \Carbon\Carbon::parse($ticket->entry_time)->diff(\Carbon\Carbon::parse($ticket->exit_time ?? now()));
-            $dur = ($d->days?$d->days.'d ':'').$d->h.'h '.$d->i.'m';
-        @endphp
+        @php $d=\Carbon\Carbon::parse($ticket->entry_time)->diff(\Carbon\Carbon::parse($ticket->exit_time??now()));$dur=($d->days?$d->days.'d ':'').$d->h.'h '.$d->i.'m'; @endphp
         <div class="d-flex justify-content-between align-items-center py-3 {{ !$loop->last?'border-bottom':'' }}" style="border-color:var(--gray5)!important">
             <div class="d-flex align-items-center gap-3">
                 <div style="width:36px;height:36px;border-radius:10px;background:var(--gray6);display:flex;align-items:center;justify-content:center">
@@ -121,12 +131,13 @@ $statusBg = match($slot->real_status) { 'occupied'=>'rgba(255,59,48,0.1)', 'main
                     </div>
                 </div>
             </div>
-            @if($ticket->payment)
-                <span style="font-weight:700">${{ number_format($ticket->payment->total_fee,2) }}</span>
-            @endif
+            @if($ticket->payment)<span style="font-weight:700">${{ number_format($ticket->payment->total_fee,2) }}</span>@endif
         </div>
     @empty
-        <div class="text-center py-4" style="color:var(--gray)">No usage history for this slot.</div>
+        <div class="text-center py-4" style="color:var(--gray)">
+            <i class="bi bi-clock-history d-block mb-2" style="font-size:24px;color:var(--gray2)"></i>
+            No usage history for this slot.
+        </div>
     @endforelse
 </div>
 </x-layout>

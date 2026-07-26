@@ -27,17 +27,20 @@ Route::middleware('auth')->group(function () {
     Route::post('/checkin/slots', [CheckInController::class, 'slotSelection'])->name('checkin.slots');
     Route::post('/checkin/assign', [CheckInController::class, 'assignSlot'])->name('checkin.assign');
     Route::get('/checkin/ticket/{ticketId}', [CheckInController::class, 'ticket'])->name('checkin.ticket');
+    Route::get('/checkin/ticket/{ticketId}/print', [CheckInController::class, 'printTicket'])->name('checkin.print');
 
     Route::get('/checkout', [CheckOutController::class, 'index'])->name('checkout.index');
     Route::get('/checkout/payment/{ticketId}', [CheckOutController::class, 'payment'])->name('checkout.payment');
     Route::post('/checkout/payment/{ticketId}', [CheckOutController::class, 'processPayment'])->name('checkout.process');
     Route::get('/checkout/complete/{ticketId}', [CheckOutController::class, 'complete'])->name('checkout.complete');
+    Route::post('/tickets/{ticketId}/cancel', [CheckOutController::class, 'cancelTicket'])->name('tickets.cancel');
 
     Route::get('/slots', [SlotMapController::class, 'index'])->name('slots.index');
     Route::get('/slots/{slot:slot_id}', [SlotMapController::class, 'show'])->name('slots.show');
     Route::patch('/slots/{slot:slot_id}/status', [SlotMapController::class, 'updateStatus'])->name('slots.updateStatus');
 
     Route::get('/history', [ParkingHistoryController::class, 'index'])->name('history.index');
+    Route::get('/history/export', [ParkingHistoryController::class, 'export'])->name('history.export');
     Route::get('/history/vehicle/{plate}', [ParkingHistoryController::class, 'vehicleHistory'])->name('history.vehicle');
 
     Route::get('/fees', [FeeRateController::class, 'index'])->name('fees.index');
@@ -51,7 +54,10 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('admin')->group(function () {
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+        Route::delete('/staff/{staff:staff_id}/destroy', [StaffController::class, 'destroy'])->name('staff.destroy');
         Route::resource('staff', StaffController::class)->parameters(['staff' => 'staff:staff_id']);
         Route::patch('/staff/{staff:staff_id}/toggle-status', [StaffController::class, 'toggleStatus'])->name('staff.toggleStatus');
+        Route::post('/staff/{staff:staff_id}/reset-password', [StaffController::class, 'resetPassword'])->name('staff.resetPassword');
     });
 });

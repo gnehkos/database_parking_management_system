@@ -28,6 +28,16 @@
                     <a href="{{ route('staff.show',$member->staff_id) }}" class="ios-btn btn-ghost btn-sm-ios"><i class="bi bi-eye-fill"></i></a>
                     <a href="{{ route('staff.edit',$member->staff_id) }}" class="ios-btn btn-sm-ios" style="background:rgba(0,122,255,0.1);color:var(--blue)"><i class="bi bi-pencil-fill"></i></a>
                     @if($member->staff_id!==auth()->id())
+                        <button class="ios-btn btn-danger-ios btn-sm-ios" data-bs-toggle="modal" data-bs-target="#confirmModal"
+                            data-title="Permanently Delete Staff"
+                            data-message="Delete {{ $member->full_name }} permanently? This cannot be undone."
+                            data-form-id="destroy-{{ $member->staff_id }}"
+                            data-action="Delete Permanently" data-danger="1">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>
+                        <form id="destroy-{{ $member->staff_id }}" method="POST" action="{{ route('staff.destroy', $member->staff_id) }}" style="display:none">
+                            @csrf @method('DELETE')
+                        </form>
                         <button class="ios-btn btn-sm-ios {{ $member->status==='active'?'btn-danger-ios':'' }}" style="{{ $member->status!=='active'?'background:rgba(52,199,89,0.1);color:var(--green)':'' }}"
                             data-bs-toggle="modal" data-bs-target="#confirmModal"
                             data-title="{{ $member->status==='active'?'Deactivate':'Activate' }} Staff"

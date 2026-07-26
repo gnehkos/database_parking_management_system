@@ -27,24 +27,21 @@ class CheckInController extends Controller
     {
         $request->validate([
             'vehicle_type' => ['required', 'in:car,motorcycle,bike,tricycle'],
-            'plate_type' => ['required', 'in:structured,custom'],
+            'plate_type'   => ['required', 'in:structured,custom'],
         ]);
 
         $vehicleType = $request->vehicle_type;
-        $plateNumber = $request->plate_number ?: null;
-        $plateType = $request->plate_type;
-
-        if ($vehicleType === 'bike') {
-            $plateNumber = null;
-        }
+        $plateNumber = $vehicleType === 'bike' ? null : ($request->plate_number ?: null);
+        $plateType   = $request->plate_type;
 
         if ($plateNumber) {
             $existing = Ticket::where('status', 'active')
                 ->whereHas('vehicle', fn($q) => $q->where('plate_number', $plateNumber))
+                ->with('slot')
                 ->first();
 
             if ($existing) {
-                return back()->withErrors(['plate' => 'This vehicle is already checked in at Slot ' . $existing->slot->slot_number . '.']);
+                return back()->withErrors(['plate' => $plateNumber . ' is already checked in at Slot ' . ($existing->slot->slot_number ?? 'N/A') . '.']);
             }
         }
 
@@ -59,52 +56,64 @@ class CheckInController extends Controller
     {
         $request->validate([
             'vehicle_type' => ['required', 'in:car,motorcycle,bike,tricycle'],
-            'plate_type' => ['required', 'in:structured,custom'],
-            'slot_id' => ['required', 'exists:parking_slots,slot_id'],
+            'plate_type'   => ['required', 'in:structured,custom'],
+            'slot_id'      => ['required', 'exists:parking_slots,slot_id'],
         ]);
 
         return DB::transaction(function () use ($request) {
-            $plateNumber = $request->plate_number ?: null;
-            if ($request->vehicle_type === 'bike') {
-                $plateNumber = null;
+            $vehicleType = $request->vehicle_type;
+            $plateNumber = $vehicleType === 'bike' ? null : ($request->plate_number ?: null);
+
+            if ($vehicleType === 'bike') {
+                $last = Vehicle::where('vehicle_type', 'bike')
+                    ->where('plate_number', 'like', 'BIKE-%')
+                    ->orderByDesc('vehicle_id')
+                    ->first();
+                $num = $last ? (intval(substr($last->plate_number, 5)) + 1) : 1;
+                $plateNumber = 'BIKE-' . str_pad($num, 3, '0', STR_PAD_LEFT);
             }
 
-            $vehicle = Vehicle::where('vehicle_type', $request->vehicle_type)
-                ->where(function ($q) use ($plateNumber) {
-                    if ($plateNumber) {
-                        $q->where('plate_number', $plateNumber);
-                    } else {
-                        $q->whereNull('plate_number');
-                    }
-                })
-                ->where('status', 'active')
-                ->first();
+            if ($plateNumber && $vehicleType !== 'bike') {
+                $existing = Ticket::where('status', 'active')
+                    ->whereHas('vehicle', fn($q) => $q->where('plate_number', $plateNumber))
+                    ->first();
+                if ($existing) {
+                    return redirect()->route('checkin.index')
+                        ->withErrors(['plate' => $plateNumber . ' is already checked in.']);
+                }
+            }
+
+            $vehicle = $vehicleType !== 'bike'
+                ? Vehicle::where('vehicle_type', $vehicleType)
+                    ->where('plate_number', $plateNumber)
+                    ->where('status', 'active')
+                    ->first()
+                : null;
 
             if (!$vehicle) {
                 $vehicle = Vehicle::create([
                     'plate_number' => $plateNumber,
-                    'vehicle_type' => $request->vehicle_type,
-                    'plate_type' => $request->plate_type,
-                    'status' => 'active',
+                    'vehicle_type' => $vehicleType,
+                    'plate_type'   => $request->plate_type,
+                    'status'       => 'active',
                 ]);
             }
 
             $slot = ParkingSlot::findOrFail($request->slot_id);
             $slot->update(['status' => 'occupied', 'updated_at' => now()]);
 
-            $feeRate = FeeRate::where('vehicle_type', $request->vehicle_type)->first();
-
+            $feeRate = FeeRate::where('vehicle_type', $vehicleType)->first();
             $ticketId = 'T' . strtoupper(substr(uniqid(), -6));
 
             $ticket = Ticket::create([
-                'ticket_id' => $ticketId,
+                'ticket_id'  => $ticketId,
                 'vehicle_id' => $vehicle->vehicle_id,
-                'slot_id' => $slot->slot_id,
-                'staff_id' => auth()->id(),
-                'rate_id' => $feeRate->rate_id,
+                'slot_id'    => $slot->slot_id,
+                'staff_id'   => auth()->id(),
+                'rate_id'    => $feeRate->rate_id,
                 'entry_time' => now(),
-                'barcode' => $ticketId,
-                'status' => 'active',
+                'barcode'    => $ticketId,
+                'status'     => 'active',
                 'created_at' => now(),
             ]);
 
@@ -116,5 +125,11 @@ class CheckInController extends Controller
     {
         $ticket = Ticket::with('vehicle', 'slot', 'staff')->findOrFail($ticketId);
         return view('checkin.ticket', compact('ticket'));
+    }
+
+    public function printTicket($ticketId)
+    {
+        $ticket = Ticket::with('vehicle', 'slot', 'staff', 'feeRate')->findOrFail($ticketId);
+        return view('checkin.print-ticket', compact('ticket'));
     }
 }

@@ -25,9 +25,9 @@
                 <div id="sF">
                     <div class="d-flex gap-2 align-items-center">
                         <input type="text" id="prefix" class="ios-input" style="max-width:55px;text-align:center;background:var(--gray6);font-weight:700" placeholder="2" maxlength="1" readonly>
-                        <input type="text" name="plate_letters" class="ios-input" style="max-width:80px;text-align:center" placeholder="AB" maxlength="2">
+                        <input type="text" id="plateLetters" name="plate_letters" class="ios-input" style="max-width:80px;text-align:center" placeholder="AB" maxlength="2" autocomplete="off">
                         <span style="font-weight:700;color:var(--gray2)">-</span>
-                        <input type="text" name="plate_digits" class="ios-input" style="max-width:110px;text-align:center" placeholder="1234" maxlength="4">
+                        <input type="text" id="plateDigits" name="plate_digits" class="ios-input" style="max-width:110px;text-align:center" placeholder="1234" maxlength="4" autocomplete="off">
                     </div>
                     <div style="font-size:12px;color:var(--gray);margin-top:6px">First digit is auto-set by vehicle type</div>
                 </div>
@@ -37,12 +37,13 @@
             <input type="hidden" name="plate_number" id="finalPlate">
             @if ($errors->any())<div class="alert-ios alert-danger-ios mt-3">{{ $errors->first() }}</div>@endif
 
-            <button type="submit" class="ios-btn btn-primary-ios w-100 mt-4" style="font-size:15px" onclick="buildPlate()">Proceed to Slot Assignment <i class="bi bi-arrow-right ms-1"></i></button>
+            <button type="button" class="ios-btn btn-primary-ios w-100 mt-4" style="font-size:15px" onclick="buildPlate()">Proceed to Slot Assignment <i class="bi bi-arrow-right ms-1"></i></button>
         </form>
     </div>
     <x-slot:scripts>
         <script>
             const prefixes = {car:'2',motorcycle:'1',tricycle:'1',bike:''};
+
             document.querySelectorAll('.vtype').forEach(r => {
                 r.addEventListener('change', function() {
                     document.querySelectorAll('.type-opt').forEach(o => o.style.borderColor='var(--gray5)');
@@ -55,24 +56,43 @@
                     }
                 });
             });
+
+            document.getElementById('plateLetters').addEventListener('input', function() {
+                this.value = this.value.replace(/[^a-zA-Z]/g, '').toUpperCase();
+            });
+
+            document.getElementById('plateDigits').addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+
             function togglePt(){
                 const pt=document.querySelector('input[name=plate_type]:checked').value;
                 document.getElementById('sF').style.display=pt==='structured'?'block':'none';
                 document.getElementById('cF').style.display=pt==='custom'?'block':'none';
             }
-            function buildPlate(){
-                const vt=document.querySelector('input[name=vehicle_type]:checked');
-                if(!vt) return;
-                if(vt.value==='bike'){document.getElementById('finalPlate').value='';return;}
-                const pt=document.querySelector('input[name=plate_type]:checked').value;
-                if(pt==='structured'){
-                    const p=document.getElementById('prefix').value;
-                    const l=document.querySelector('[name=plate_letters]').value;
-                    const d=document.querySelector('[name=plate_digits]').value;
-                    document.getElementById('finalPlate').value=p+l+'-'+d;
-                } else {
-                    document.getElementById('finalPlate').value=document.querySelector('[name=plate_number_custom]').value;
+
+            function buildPlate() {
+                const vt = document.querySelector('input[name=vehicle_type]:checked');
+                if (!vt) { alert('Please select a vehicle type.'); return; }
+                const pt = document.querySelector('input[name=plate_type]:checked').value;
+                if (vt.value === 'bike') {
+                    document.getElementById('finalPlate').value = '';
+                    document.getElementById('checkinForm').submit();
+                    return;
                 }
+                if (pt === 'structured') {
+                    const p = document.getElementById('prefix').value;
+                    const l = document.getElementById('plateLetters').value;
+                    const d = document.getElementById('plateDigits').value;
+                    if (!/^[A-Z]{1,2}$/.test(l)) { alert('Letters must be A-Z only (1-2 characters).'); return; }
+                    if (!/^\d{4}$/.test(d)) { alert('Digits must be exactly 4 numbers.'); return; }
+                    document.getElementById('finalPlate').value = p + l + '-' + d;
+                } else {
+                    const custom = document.querySelector('[name=plate_number_custom]').value.trim();
+                    if (!custom) { alert('Please enter a custom plate number.'); return; }
+                    document.getElementById('finalPlate').value = custom;
+                }
+                document.getElementById('checkinForm').submit();
             }
         </script>
     </x-slot:scripts>

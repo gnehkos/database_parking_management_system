@@ -64,4 +64,49 @@ class ReportController extends Controller
             'totalTransactions', 'avgPerSession', 'dailyRevenue', 'vehicleTypeCounts', 'totalTypeCount'
         ));
     }
+
+    public function export(Request $request)
+    {
+        $period     = $request->input('period', 'year');
+        $typeFilter = $request->input('type', 'all');
+        $now        = now();
+
+        $query = \App\Models\Payment::with('ticket.vehicle', 'ticket.slot')
+            ->orderBy('paid_at', 'desc');
+
+        switch ($period) {
+            case 'today':   $query->whereDate('paid_at', $now->toDateString()); break;
+            case '7days':   $query->where('paid_at', '>=', $now->copy()->subDays(7)); break;
+            case 'month':   $query->whereMonth('paid_at', $now->month)->whereYear('paid_at', $now->year); break;
+            case '3months': $query->where('paid_at', '>=', $now->copy()->subMonths(3)); break;
+            case '6months': $query->where('paid_at', '>=', $now->copy()->subMonths(6)); break;
+            case 'year':    $query->whereYear('paid_at', $now->year); break;
+        }
+
+        if ($typeFilter !== 'all') {
+            $query->whereHas('ticket.vehicle', fn($q) => $q->where('vehicle_type', $typeFilter));
+        }
+
+        $payments = $query->get();
+        $filename = 'report-' . $period . '-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($payments) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Ticket ID', 'Plate Number', 'Vehicle Type', 'Slot', 'Duration (min)', 'Fee (USD)', 'Payment Method', 'Paid At']);
+            foreach ($payments as $p) {
+                fputcsv($handle, [
+                    $p->ticket_id,
+                    $p->ticket->vehicle->plate_number ?? 'No plate',
+                    $p->ticket->vehicle->vehicle_type ?? '',
+                    $p->ticket->slot->slot_number ?? 'N/A',
+                    $p->duration,
+                    $p->total_fee,
+                    $p->payment_method,
+                    $p->paid_at,
+                ]);
+            }
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+    
 }
