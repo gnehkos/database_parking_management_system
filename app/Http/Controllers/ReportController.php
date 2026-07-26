@@ -2,66 +2,100 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Payment;
 use App\Models\Ticket;
+use App\Models\Payment;
+use App\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class ReportController extends Controller
 {
+    private function getPeriodStart(string $period)
+    {
+        $now = now();
+        return match($period) {
+            'today'   => $now->copy()->startOfDay(),
+            '7days'   => $now->copy()->subDays(7),
+            'month'   => $now->copy()->startOfMonth(),
+            '3months' => $now->copy()->subMonths(3),
+            '6months' => $now->copy()->subMonths(6),
+            'year'    => $now->copy()->startOfYear(),
+            default   => null,
+        };
+    }
+
     public function index(Request $request)
     {
-        $period = $request->input('period', 'month');
+        $period     = $request->input('period', 'year');
         $typeFilter = $request->input('type', 'all');
-        $now = now();
+        $now        = now();
+        $start      = $this->getPeriodStart($period);
 
-        $startDate = match ($period) {
-            'today' => $now->copy()->startOfDay(),
-            '7days' => $now->copy()->subDays(7)->startOfDay(),
-            'month' => $now->copy()->startOfMonth(),
-            '3months' => $now->copy()->subMonths(3)->startOfDay(),
-            '6months' => $now->copy()->subMonths(6)->startOfDay(),
-            'year' => $now->copy()->startOfYear(),
-            default => $now->copy()->startOfMonth(),
-        };
+        $dateRange = $start
+            ? $start->format('M d, Y') . ' - ' . $now->format('M d, Y')
+            : 'All time';
 
-        $dateRange = $startDate->format('M d') . ' - ' . $now->format('M d, Y');
+        $paymentQuery = Payment::where('payments.status', 'paid')
+            ->join('tickets', 'payments.ticket_id', '=', 'tickets.ticket_id')
+            ->join('vehicles', 'tickets.vehicle_id', '=', 'vehicles.vehicle_id');
 
-        $ticketQuery = Ticket::where('status', 'completed')
-            ->where('exit_time', '>=', $startDate);
-
+        if ($start) {
+            $paymentQuery->where('payments.paid_at', '>=', $start);
+        }
         if ($typeFilter !== 'all') {
-            $ticketQuery->whereHas('vehicle', fn ($q) => $q->where('vehicle_type', $typeFilter));
+            $paymentQuery->where('vehicles.vehicle_type', $typeFilter);
         }
 
-        $ticketIds = $ticketQuery->pluck('ticket_id');
+        $periodRevenue      = (clone $paymentQuery)->sum('payments.total_fee');
+        $totalTransactions  = (clone $paymentQuery)->count('payments.payment_id');
+        $avgPerSession      = $totalTransactions > 0 ? $periodRevenue / $totalTransactions : 0;
 
-        $periodRevenue = Payment::whereIn('ticket_id', $ticketIds)->sum('total_fee');
-        $todayRevenue = Payment::whereDate('paid_at', today())->sum('total_fee');
-        $totalTransactions = $ticketIds->count();
-        $avgPerSession = $totalTransactions > 0 ? round($periodRevenue / $totalTransactions, 2) : 0;
+       $todayRevenue = Payment::where('payments.status', 'paid')
+            ->whereDate('payments.paid_at', $now->toDateString())
+            ->sum('payments.total_fee');
 
-        $dailyRevenue = Payment::whereIn('ticket_id', $ticketIds)
-            ->selectRaw('DATE(paid_at) as date, SUM(total_fee) as total')
-            ->groupByRaw('DATE(paid_at)')
+        $dailyRevenue = Payment::where('payments.status', 'paid')
+            ->join('tickets', 'payments.ticket_id', '=', 'tickets.ticket_id')
+            ->join('vehicles', 'tickets.vehicle_id', '=', 'vehicles.vehicle_id')
+            ->when($start, fn($q) => $q->where('payments.paid_at', '>=', $start))
+            ->when($typeFilter !== 'all', fn($q) => $q->where('vehicles.vehicle_type', $typeFilter))
+            ->selectRaw('DATE(payments.paid_at) as date, SUM(payments.total_fee) as total')
+            ->groupBy('date')
             ->orderBy('date')
             ->pluck('total', 'date')
             ->toArray();
 
-        $vehicleTypeCounts = Ticket::where('tickets.status', 'completed')
-            ->where('exit_time', '>=', $startDate)
-            ->join('vehicles', 'tickets.vehicle_id', '=', 'vehicles.vehicle_id')
-            ->selectRaw('vehicles.vehicle_type, COUNT(*) as count')
+        $vehicleTypeCounts = Ticket::join('vehicles', 'tickets.vehicle_id', '=', 'vehicles.vehicle_id')
+            ->join('payments', 'tickets.ticket_id', '=', 'payments.ticket_id')
+            ->where('payments.status', 'paid')
+            ->when($start, fn($q) => $q->where('payments.paid_at', '>=', $start))
+            ->selectRaw('vehicles.vehicle_type, COUNT(tickets.ticket_id) as count')
             ->groupBy('vehicles.vehicle_type')
             ->pluck('count', 'vehicle_type')
             ->toArray();
 
         $totalTypeCount = array_sum($vehicleTypeCounts);
 
+        $topVehicles = DB::select("
+            SELECT
+                v.plate_number,
+                v.vehicle_type,
+                (SELECT COUNT(*) FROM tickets t WHERE t.vehicle_id = v.vehicle_id) AS visit_count,
+                (SELECT COALESCE(SUM(p.total_fee), 0)
+                 FROM payments p
+                 JOIN tickets t2 ON t2.ticket_id = p.ticket_id
+                 WHERE t2.vehicle_id = v.vehicle_id AND p.status = 'paid') AS total_spent
+            FROM vehicles v
+            WHERE v.status = 'active'
+            HAVING visit_count > 0
+            ORDER BY visit_count DESC
+            LIMIT 5
+        ");
+
         return view('reports.index', compact(
-            'period', 'typeFilter', 'dateRange', 'periodRevenue', 'todayRevenue',
-            'totalTransactions', 'avgPerSession', 'dailyRevenue', 'vehicleTypeCounts', 'totalTypeCount'
+            'period', 'typeFilter', 'dateRange',
+            'periodRevenue', 'totalTransactions', 'avgPerSession', 'todayRevenue',
+            'dailyRevenue', 'vehicleTypeCounts', 'totalTypeCount', 'topVehicles'
         ));
     }
 
@@ -69,25 +103,27 @@ class ReportController extends Controller
     {
         $period     = $request->input('period', 'year');
         $typeFilter = $request->input('type', 'all');
-        $now        = now();
+        $start      = $this->getPeriodStart($period);
 
-        $query = \App\Models\Payment::with('ticket.vehicle', 'ticket.slot')
-            ->orderBy('paid_at', 'desc');
+        $payments = Payment::where('status', 'paid')
+            ->join('tickets', 'payments.ticket_id', '=', 'tickets.ticket_id')
+            ->join('vehicles', 'tickets.vehicle_id', '=', 'vehicles.vehicle_id')
+            ->leftJoin('parking_slots', 'tickets.slot_id', '=', 'parking_slots.slot_id')
+            ->when($start, fn($q) => $q->where('payments.paid_at', '>=', $start))
+            ->when($typeFilter !== 'all', fn($q) => $q->where('vehicles.vehicle_type', $typeFilter))
+            ->select(
+                'payments.ticket_id',
+                'vehicles.plate_number',
+                'vehicles.vehicle_type',
+                'parking_slots.slot_number',
+                'payments.duration',
+                'payments.total_fee',
+                'payments.payment_method',
+                'payments.paid_at'
+            )
+            ->orderBy('payments.paid_at', 'desc')
+            ->get();
 
-        switch ($period) {
-            case 'today':   $query->whereDate('paid_at', $now->toDateString()); break;
-            case '7days':   $query->where('paid_at', '>=', $now->copy()->subDays(7)); break;
-            case 'month':   $query->whereMonth('paid_at', $now->month)->whereYear('paid_at', $now->year); break;
-            case '3months': $query->where('paid_at', '>=', $now->copy()->subMonths(3)); break;
-            case '6months': $query->where('paid_at', '>=', $now->copy()->subMonths(6)); break;
-            case 'year':    $query->whereYear('paid_at', $now->year); break;
-        }
-
-        if ($typeFilter !== 'all') {
-            $query->whereHas('ticket.vehicle', fn($q) => $q->where('vehicle_type', $typeFilter));
-        }
-
-        $payments = $query->get();
         $filename = 'report-' . $period . '-' . now()->format('Y-m-d') . '.csv';
 
         return response()->streamDownload(function () use ($payments) {
@@ -96,9 +132,9 @@ class ReportController extends Controller
             foreach ($payments as $p) {
                 fputcsv($handle, [
                     $p->ticket_id,
-                    $p->ticket->vehicle->plate_number ?? 'No plate',
-                    $p->ticket->vehicle->vehicle_type ?? '',
-                    $p->ticket->slot->slot_number ?? 'N/A',
+                    $p->plate_number ?? 'No plate',
+                    $p->vehicle_type,
+                    $p->slot_number ?? 'N/A',
                     $p->duration,
                     $p->total_fee,
                     $p->payment_method,
@@ -108,5 +144,4 @@ class ReportController extends Controller
             fclose($handle);
         }, $filename, ['Content-Type' => 'text/csv']);
     }
-    
 }

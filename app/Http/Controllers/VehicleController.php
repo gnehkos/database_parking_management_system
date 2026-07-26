@@ -5,23 +5,23 @@ namespace App\Http\Controllers;
 use App\Models\Vehicle;
 use App\Models\Ticket;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class VehicleController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Vehicle::active()->orderBy('registered_at', 'desc');
+        $query = Vehicle::where('status', 'active');
+        $totalCount = $query->count();
 
         if ($request->filled('search')) {
             $query->where('plate_number', 'like', '%' . $request->search . '%');
         }
-
         if ($request->filled('type') && $request->type !== 'all') {
             $query->where('vehicle_type', $request->type);
         }
 
-        $vehicles = $query->paginate(10)->withQueryString();
-        $totalCount = Vehicle::active()->count();
+        $vehicles = $query->orderBy('registered_at', 'desc')->paginate(20)->withQueryString();
 
         return view('vehicles.index', compact('vehicles', 'totalCount'));
     }
@@ -35,25 +35,14 @@ class VehicleController extends Controller
     {
         $request->validate([
             'vehicle_type' => ['required', 'in:car,motorcycle,bike,tricycle'],
-            'plate_type' => ['required', 'in:structured,custom'],
+            'plate_type'   => ['required', 'in:structured,custom'],
         ]);
 
-        if ($request->plate_type === 'structured') {
-            $request->validate([
-                'plate_prefix' => ['required', 'size:1'],
-                'plate_letters' => ['required', 'size:2', 'alpha'],
-                'plate_digits' => ['required', 'size:4', 'numeric'],
-            ]);
-            $plate = $request->plate_prefix . $request->plate_letters . '-' . $request->plate_digits;
-        } else {
-            $plate = $request->plate_number;
-        }
-
         Vehicle::create([
-            'plate_number' => $plate ?: null,
+            'plate_number' => $request->plate_number ?: null,
             'vehicle_type' => $request->vehicle_type,
-            'plate_type' => $request->plate_type,
-            'status' => 'active',
+            'plate_type'   => $request->plate_type,
+            'status'       => 'active',
         ]);
 
         return redirect()->route('vehicles.index')->with('success', 'Vehicle registered.');
@@ -61,17 +50,20 @@ class VehicleController extends Controller
 
     public function show(Vehicle $vehicle)
     {
+        $activeTicket = Ticket::where('vehicle_id', $vehicle->vehicle_id)
+            ->where('status', 'active')
+            ->with('slot', 'feeRate')
+            ->first();
+
         $tickets = Ticket::where('vehicle_id', $vehicle->vehicle_id)
-            ->with('slot', 'payment')
+            ->with('slot', 'payment', 'staff')
             ->orderBy('entry_time', 'desc')
             ->get();
 
         $totalVisits = $tickets->count();
-        $totalPaid = $tickets->sum(fn ($t) => $t->payment?->total_fee ?? 0);
+        $totalPaid   = $tickets->sum(fn($t) => $t->payment?->total_fee ?? 0);
 
-        $activeTicket = $tickets->firstWhere('status', 'active');
-
-        return view('vehicles.show', compact('vehicle', 'tickets', 'totalVisits', 'totalPaid', 'activeTicket'));
+        return view('vehicles.show', compact('vehicle', 'activeTicket', 'tickets', 'totalVisits', 'totalPaid'));
     }
 
     public function edit(Vehicle $vehicle)
@@ -87,16 +79,39 @@ class VehicleController extends Controller
         ]);
 
         $vehicle->update([
-            'plate_number' => $request->plate_number ?: null,
+            'plate_number' => $request->plate_number,
             'vehicle_type' => $request->vehicle_type,
         ]);
 
-        return redirect()->route('vehicles.show', $vehicle)->with('success', 'Vehicle updated.');
+        return redirect()->route('vehicles.show', $vehicle->vehicle_id)->with('success', 'Vehicle updated.');
     }
 
     public function destroy(Vehicle $vehicle)
     {
-        $vehicle->update(['status' => 'deleted']);
-        return redirect()->route('vehicles.index')->with('success', 'Vehicle ' . ($vehicle->plate_number ?? 'No plate') . ' removed.');
+        $hasTickets = Ticket::where('vehicle_id', $vehicle->vehicle_id)->exists();
+
+        if ($hasTickets) {
+            $vehicle->update(['status' => 'deleted']);
+            return redirect()->route('vehicles.index')->with('success', 'Vehicle removed from active list. History preserved.');
+        }
+
+        $vehicle->delete();
+        return redirect()->route('vehicles.index')->with('success', 'Vehicle permanently deleted.');
+    }
+
+    public function hardDelete(Vehicle $vehicle)
+    {
+        try {
+            DB::transaction(function () use ($vehicle) {
+                Ticket::where('vehicle_id', $vehicle->vehicle_id)->each(function ($ticket) {
+                    $ticket->payment()->delete();
+                    $ticket->delete();
+                });
+                $vehicle->delete();
+            });
+            return redirect()->route('vehicles.index')->with('success', 'Vehicle and all history permanently deleted.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Could not delete vehicle: ' . $e->getMessage());
+        }
     }
 }

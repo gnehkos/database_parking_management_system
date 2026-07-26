@@ -43,7 +43,7 @@
         @endforeach
     </div>
 
-    <div class="row g-3">
+    <div class="row g-3 mb-4">
         <div class="col-md-8">
             <div class="card-ios card-ios-p">
                 <div class="d-flex align-items-center gap-2 mb-3">
@@ -71,6 +71,40 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="card-ios card-ios-p">
+        <div class="d-flex align-items-center gap-2 mb-4">
+            <i class="bi bi-trophy-fill" style="color:var(--orange);font-size:18px"></i>
+            <span style="font-size:16px;font-weight:700">Top 5 Most Frequent Vehicles</span>
+            <span class="pill pill-gray ms-2" style="font-size:11px">Subquery</span>
+        </div>
+        @if(count($topVehicles) > 0)
+            <table class="ios-table">
+                <thead><tr><th>#</th><th>Plate Number</th><th>Type</th><th>Total Visits</th><th>Total Spent</th></tr></thead>
+                <tbody>
+                    @foreach ($topVehicles as $i => $v)
+                        <tr>
+                            <td>
+                                <span style="width:28px;height:28px;border-radius:50%;background:{{ $i===0?'var(--orange)':($i===1?'var(--gray2)':($i===2?'#cd7f32':'var(--gray5)')) }};color:{{ $i<3?'#fff':'var(--gray)' }};display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ $i+1 }}</span>
+                            </td>
+                            <td>
+                                @if($v->plate_number)
+                                    <a href="{{ route('history.vehicle', $v->plate_number) }}" style="color:var(--blue);font-weight:700">{{ $v->plate_number }}</a>
+                                @else
+                                    <span style="color:var(--gray)">No plate</span>
+                                @endif
+                            </td>
+                            <td><x-type-badge :type="$v->vehicle_type" /></td>
+                            <td style="font-weight:700">{{ $v->visit_count }}</td>
+                            <td style="font-weight:700;color:var(--green)">${{ number_format($v->total_spent, 2) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @else
+            <div class="text-center py-4" style="color:var(--gray)">No data available.</div>
+        @endif
     </div>
 
     <x-slot:scripts>

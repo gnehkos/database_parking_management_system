@@ -59,10 +59,10 @@ class CheckOutController extends Controller
             ->with('vehicle', 'slot', 'feeRate', 'staff')
             ->findOrFail($ticketId);
 
-        $now      = now();
-        $hours    = Carbon::parse($ticket->entry_time)->diffInMinutes($now) / 60;
-        $fee      = $ticket->feeRate->calculateFee($hours);
-        $diff     = Carbon::parse($ticket->entry_time)->diff($now);
+        $now          = now();
+        $hours        = Carbon::parse($ticket->entry_time)->diffInMinutes($now) / 60;
+        $fee          = $ticket->feeRate->calculateFee($hours);
+        $diff         = Carbon::parse($ticket->entry_time)->diff($now);
         $durationText = ($diff->days ? $diff->days . 'd ' : '') . $diff->h . 'h ' . $diff->i . 'm';
         $khrAmount    = round($fee * FeeRate::KHR_RATE);
 
@@ -76,7 +76,7 @@ class CheckOutController extends Controller
         ]);
 
         return DB::transaction(function () use ($request, $ticketId) {
-            $ticket  = Ticket::where('status', 'active')->findOrFail($ticketId);
+            $ticket  = Ticket::where('status', 'active')->lockForUpdate()->findOrFail($ticketId);
             $feeRate = FeeRate::find($ticket->rate_id);
             $now     = now();
 
@@ -94,6 +94,7 @@ class CheckOutController extends Controller
                 'duration'       => round($hours, 2),
                 'total_fee'      => $fee,
                 'payment_method' => $request->payment_method,
+                'status'         => 'paid',
                 'paid_at'        => $now,
             ]);
 
@@ -118,6 +119,26 @@ class CheckOutController extends Controller
         });
 
         return redirect()->route('slots.index')
-            ->with('success', 'Ticket ' . $ticketId . ' cancelled and slot freed.');
+            ->with('success', 'Ticket ' . $ticket->ticket_id . ' cancelled and slot freed.');
+    }
+
+    public function voidPayment(Request $request, $ticketId)
+    {
+        DB::transaction(function () use ($ticketId) {
+            $ticket  = Ticket::with('payment')->findOrFail($ticketId);
+            $payment = $ticket->payment;
+
+            if ($payment) {
+                $payment->update(['status' => 'voided']);
+            }
+
+            $ticket->update(['status' => 'active', 'exit_time' => null]);
+
+            ParkingSlot::where('slot_id', $ticket->slot_id)
+                ->update(['status' => 'occupied', 'updated_at' => now()]);
+        });
+
+        return redirect()->route('history.index')
+            ->with('success', 'Payment voided. Ticket reopened as active.');
     }
 }

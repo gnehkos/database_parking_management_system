@@ -6,7 +6,7 @@ use App\Models\Ticket;
 use App\Models\Payment;
 use App\Models\ParkingSlot;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -25,19 +25,25 @@ class DashboardController extends Controller
         $allSlots   = ParkingSlot::all();
         $totalSlots = $allSlots->count();
 
-        $activeTickets = Ticket::where('status', 'active')->with('vehicle', 'slot')->get();
+        $activeTickets = Ticket::where('status', 'active')
+            ->with('vehicle', 'slot')
+            ->get();
+
         $occupied    = $activeTickets->count();
         $maintenance = $allSlots->where('status', 'maintenance')->count();
         $available   = $totalSlots - $occupied - $maintenance;
 
-        $periodRevenue      = Payment::where('paid_at', '>=', $periodStart)->sum('total_fee');
-        $periodTransactions = Payment::where('paid_at', '>=', $periodStart)->count();
+        $periodRevenue      = Payment::where('paid_at', '>=', $periodStart)->where('status', 'paid')->sum('total_fee');
+        $periodTransactions = Payment::where('paid_at', '>=', $periodStart)->where('status', 'paid')->count();
+
+        $trafficRaw = Ticket::whereDate('entry_time', $now->toDateString())
+            ->selectRaw('HOUR(entry_time) as hour, COUNT(*) as count')
+            ->groupBy('hour')
+            ->pluck('count', 'hour');
 
         $trafficData = [];
         for ($h = 0; $h < 24; $h++) {
-$trafficData[$h] = Ticket::whereDate('entry_time', $now->toDateString())
-                ->whereRaw('HOUR(entry_time) = ?', [$h])
-                ->count();
+            $trafficData[$h] = $trafficRaw[$h] ?? 0;
         }
 
         $recentActivity = $activeTickets->take(6)->map(function ($ticket) {

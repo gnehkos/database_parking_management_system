@@ -8,15 +8,27 @@
         <div class="d-flex gap-2">
             <a href="{{ route('vehicles.edit', $vehicle->vehicle_id) }}" class="ios-btn btn-ghost btn-sm-ios"><i class="bi bi-pencil me-1"></i> Edit</a>
             <button class="ios-btn btn-danger-ios btn-sm-ios" data-bs-toggle="modal" data-bs-target="#confirmModal"
-                data-title="Delete Vehicle"
-                data-message="Permanently delete {{ $vehicle->plate_number ?? 'this vehicle' }}?"
-                data-form-id="del-v-{{ $vehicle->vehicle_id }}"
-                data-action="Delete" data-danger="1">
-                <i class="bi bi-trash-fill me-1"></i> Delete
+                data-title="Remove Vehicle"
+                data-message="Remove {{ $vehicle->plate_number ?? 'this vehicle' }}? If it has parking history, it will be soft-deleted (hidden from lists but history is preserved)."
+                data-form-id="soft-del-{{ $vehicle->vehicle_id }}"
+                data-action="Remove">
+                <i class="bi bi-eye-slash-fill me-1"></i> Remove
             </button>
-            <form id="del-v-{{ $vehicle->vehicle_id }}" method="POST" action="{{ route('vehicles.destroy', $vehicle->vehicle_id) }}" style="display:none">
+            <form id="soft-del-{{ $vehicle->vehicle_id }}" method="POST" action="{{ route('vehicles.destroy', $vehicle->vehicle_id) }}" style="display:none">
                 @csrf @method('DELETE')
             </form>
+            @if(auth()->user()->isAdmin())
+                <button class="ios-btn btn-danger-ios btn-sm-ios" data-bs-toggle="modal" data-bs-target="#confirmModal"
+                    data-title="Permanently Delete Vehicle"
+                    data-message="Permanently delete {{ $vehicle->plate_number ?? 'this vehicle' }} AND all its parking history? This cannot be undone."
+                    data-form-id="hard-del-{{ $vehicle->vehicle_id }}"
+                    data-action="Delete Permanently" data-danger="1">
+                    <i class="bi bi-trash-fill me-1"></i> Hard Delete
+                </button>
+                <form id="hard-del-{{ $vehicle->vehicle_id }}" method="POST" action="{{ route('vehicles.hardDelete', $vehicle->vehicle_id) }}" style="display:none">
+                    @csrf @method('DELETE')
+                </form>
+            @endif
         </div>
     </div>
 
@@ -40,14 +52,8 @@
                         $diff = \Carbon\Carbon::parse($activeTicket->entry_time)->diff(now());
                         $dur = ($diff->days ? $diff->days.'d ' : '').$diff->h.'h '.$diff->i.'m';
                     @endphp
-                    <div class="text-center">
-                        <div style="font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:0.5px">Duration</div>
-                        <div style="font-size:18px;font-weight:700">{{ $dur }}</div>
-                    </div>
-                    <div class="text-center mx-3">
-                        <div style="font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:0.5px">Est. Fee</div>
-                        <div style="font-size:18px;font-weight:700;color:var(--red)">${{ number_format($estFee, 2) }}</div>
-                    </div>
+                    <div class="text-center"><div style="font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:0.5px">Duration</div><div style="font-size:18px;font-weight:700">{{ $dur }}</div></div>
+                    <div class="text-center mx-3"><div style="font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:0.5px">Est. Fee</div><div style="font-size:18px;font-weight:700;color:var(--red)">${{ number_format($estFee,2) }}</div></div>
                     <a href="{{ route('checkout.payment', $activeTicket->ticket_id) }}" class="ios-btn" style="background:var(--red);color:#fff">
                         <i class="bi bi-arrow-up-right-circle-fill me-1"></i> Check Out
                     </a>
@@ -88,7 +94,7 @@
                     </div>
                     <div>
                         <div style="font-size:14px;font-weight:600">{{ $ticket->ticket_id }}
-                            <span class="pill {{ $ticket->status==='active'?'pill-green':($ticket->status==='completed'?'pill-blue':'pill-gray') }} ms-1">{{ ucfirst($ticket->status) }}</span>
+                            <span class="pill {{ $ticket->status==='active'?'pill-green':($ticket->status==='completed'?'pill-blue':($ticket->status==='cancelled'?'pill-red':'pill-gray')) }} ms-1">{{ ucfirst($ticket->status) }}</span>
                         </div>
                         <div style="font-size:12px;color:var(--gray)">
                             {{ \Carbon\Carbon::parse($ticket->entry_time)->format('M d, g:i A') }}
@@ -100,9 +106,17 @@
                         @endif
                     </div>
                 </div>
-                @if ($ticket->payment)
-                    <span style="font-weight:700">${{ number_format($ticket->payment->total_fee,2) }}</span>
-                @endif
+                <div class="d-flex align-items-center gap-2">
+                    @if($ticket->payment)
+                        <span style="font-weight:700">${{ number_format($ticket->payment->total_fee,2) }}</span>
+                        @if($ticket->payment->status === 'voided')
+                            <span class="pill pill-red" style="font-size:10px">Voided</span>
+                        @endif
+                    @endif
+                    @if(auth()->user()->isAdmin())
+                        <a href="{{ route('tickets.edit', $ticket->ticket_id) }}" class="ios-btn btn-ghost btn-sm-ios"><i class="bi bi-pencil-fill"></i></a>
+                    @endif
+                </div>
             </div>
         @empty
             <div class="text-center py-5">
@@ -110,7 +124,6 @@
                     <i class="bi bi-clock-history" style="font-size:22px;color:var(--gray2)"></i>
                 </div>
                 <div style="font-size:15px;font-weight:600;color:var(--label2)">No parking history</div>
-                <div style="font-size:13px;color:var(--gray);margin-top:4px">This vehicle hasn't parked yet</div>
             </div>
         @endforelse
     </div>

@@ -1,9 +1,6 @@
 <x-layout title="History">
     <div class="page-header d-flex justify-content-between align-items-center">
-        <div>
-            <div class="page-title">History</div>
-            <div class="page-sub">All parking entry and exit records</div>
-        </div>
+        <div><div class="page-title">History</div><div class="page-sub">All parking entry and exit records</div></div>
         <a href="{{ route('history.export', request()->query()) }}" class="ios-btn btn-ghost btn-sm-ios">
             <i class="bi bi-download me-1"></i> Export CSV
         </a>
@@ -39,7 +36,7 @@
                     @endforeach
                 </div>
                 <div class="seg">
-                    @foreach (['all'=>'All','active'=>'Active','completed'=>'Completed'] as $k=>$l)
+                    @foreach (['all'=>'All','active'=>'Active','completed'=>'Completed','cancelled'=>'Cancelled'] as $k=>$l)
                         <a href="{{ route('history.index', array_merge(request()->query(), ['status_filter'=>$k])) }}" class="{{ $statusFilter===$k?'on':'' }}">{{ $l }}</a>
                     @endforeach
                 </div>
@@ -58,7 +55,7 @@
                 <thead>
                     <tr>
                         <th>Ticket</th><th>Plate</th><th>Type</th><th>Slot</th><th>Entry</th><th>Exit</th><th>Duration</th><th>Fee</th><th>Status</th>
-                        @if(auth()->user()->isAdmin())<th>Staff</th>@endif
+                        @if(auth()->user()->isAdmin())<th>Staff</th><th></th>@endif
                     </tr>
                 </thead>
                 <tbody>
@@ -82,15 +79,25 @@
                             <td style="color:var(--gray);white-space:nowrap">{{ \Carbon\Carbon::parse($ticket->entry_time)->format('M d, g:i A') }}</td>
                             <td style="color:var(--gray);white-space:nowrap">{{ $ticket->exit_time?\Carbon\Carbon::parse($ticket->exit_time)->format('M d, g:i A'):'-' }}</td>
                             <td style="white-space:nowrap">{{ $dur }}</td>
-                            <td style="font-weight:600">{{ $ticket->payment?'$'.number_format($ticket->payment->total_fee,2):'-' }}</td>
+                            <td>
+                                @if($ticket->payment)
+                                    <span style="font-weight:600">${{ number_format($ticket->payment->total_fee,2) }}</span>
+                                    @if(isset($ticket->payment->status) && $ticket->payment->status === 'voided')
+                                        <span class="pill pill-red ms-1" style="font-size:10px">Voided</span>
+                                    @endif
+                                @else
+                                    -
+                                @endif
+                            </td>
                             <td><span class="pill {{ $ticket->status==='active'?'pill-green':($ticket->status==='completed'?'pill-blue':($ticket->status==='cancelled'?'pill-red':'pill-gray')) }}">{{ ucfirst($ticket->status) }}</span></td>
                             @if(auth()->user()->isAdmin())
                                 <td style="font-size:12px;color:var(--gray);white-space:nowrap">{{ $ticket->staff->full_name??'-' }}</td>
+                                <td><a href="{{ route('tickets.edit', $ticket->ticket_id) }}" class="ios-btn btn-ghost btn-sm-ios"><i class="bi bi-pencil-fill"></i></a></td>
                             @endif
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ auth()->user()->isAdmin()?10:9 }}">
+                            <td colspan="{{ auth()->user()->isAdmin()?11:9 }}">
                                 <div class="text-center py-5">
                                     <div style="width:52px;height:52px;border-radius:50%;background:var(--gray6);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
                                         <i class="bi bi-clock-history" style="font-size:22px;color:var(--gray2)"></i>
