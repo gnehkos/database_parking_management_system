@@ -3,10 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ticket;
-use App\Models\Payment;
 use App\Models\Vehicle;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ParkingHistoryController extends Controller
 {
@@ -14,40 +12,33 @@ class ParkingHistoryController extends Controller
     {
         $totalSessions = Ticket::count();
         $completedSessions = Ticket::where('status', 'completed')->count();
-        $totalRevenue = Payment::sum('total_fee');
+        $totalRevenue = \App\Models\Payment::sum('total_fee');
 
         $period = $request->input('period', 'all');
         $statusFilter = $request->input('status_filter', 'all');
         $typeFilter = $request->input('type', 'all');
+        $search = $request->input('search');
 
         $query = Ticket::with('vehicle', 'slot', 'payment', 'staff')
             ->orderBy('entry_time', 'desc');
 
-        $now = now();
-        switch ($period) {
-            case 'today':
-                $query->whereDate('entry_time', $now->toDateString());
-                break;
-            case '7days':
-                $query->where('entry_time', '>=', $now->copy()->subDays(7));
-                break;
-            case 'month':
-                $query->whereMonth('entry_time', $now->month)->whereYear('entry_time', $now->year);
-                break;
-            case '3months':
-                $query->where('entry_time', '>=', $now->copy()->subMonths(3));
-                break;
-            case 'year':
-                $query->whereYear('entry_time', $now->year);
-                break;
-        }
-
-        if ($statusFilter !== 'all') {
-            $query->where('status', $statusFilter);
-        }
-
-        if ($typeFilter !== 'all') {
-            $query->whereHas('vehicle', fn($q) => $q->where('vehicle_type', $typeFilter));
+        if ($search) {
+            $query->whereHas('vehicle', fn($q) => $q->where('plate_number', 'like', '%'.$search.'%'));
+        } else {
+            $now = now();
+            switch ($period) {
+                case 'today':   $query->whereDate('entry_time', $now->toDateString()); break;
+                case '7days':   $query->where('entry_time', '>=', $now->copy()->subDays(7)); break;
+                case 'month':   $query->whereMonth('entry_time', $now->month)->whereYear('entry_time', $now->year); break;
+                case '3months': $query->where('entry_time', '>=', $now->copy()->subMonths(3)); break;
+                case 'year':    $query->whereYear('entry_time', $now->year); break;
+            }
+            if ($statusFilter !== 'all') {
+                $query->where('status', $statusFilter);
+            }
+            if ($typeFilter !== 'all') {
+                $query->whereHas('vehicle', fn($q) => $q->where('vehicle_type', $typeFilter));
+            }
         }
 
         $tickets = $query->paginate(20)->withQueryString();

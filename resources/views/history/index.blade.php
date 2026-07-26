@@ -1,7 +1,7 @@
 <x-layout title="History">
     <div class="page-header">
         <div class="page-title">History</div>
-        <div class="page-sub">All entry and exit records</div>
+        <div class="page-sub">All parking entry and exit records</div>
     </div>
 
     <div class="row g-3 mb-4">
@@ -11,14 +11,30 @@
     </div>
 
     <div class="card-ios card-ios-p">
-        <div class="d-flex gap-3 flex-wrap mb-4 align-items-center">
+        <div class="d-flex gap-2 mb-3">
+            <form method="GET" action="{{ route('history.index') }}" class="flex-grow-1 d-flex gap-2" style="max-width:440px">
+                @foreach (request()->except('search','page') as $k=>$v)
+                    <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+                @endforeach
+                <div style="position:relative;flex:1">
+                    <i class="bi bi-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--gray);font-size:15px"></i>
+                    <input type="text" name="search" class="ios-input" style="padding-left:42px" placeholder="Search plate number..." value="{{ request('search') }}" autocomplete="off">
+                </div>
+                @if(request('search'))
+                    <a href="{{ route('history.index', request()->except('search','page')) }}" class="ios-btn btn-ghost btn-sm-ios">Clear</a>
+                @endif
+            </form>
+        </div>
+
+        @if(!request('search'))
+        <div class="d-flex gap-2 flex-wrap mb-4 align-items-center">
             <div class="filter-pills">
                 @foreach (['all'=>'All Time','today'=>'Today','7days'=>'7 Days','month'=>'This Month','3months'=>'3 Months','year'=>'This Year'] as $k=>$l)
                     <a href="{{ route('history.index', array_merge(request()->query(), ['period'=>$k])) }}" class="filter-pill {{ $period===$k?'on':'' }}">{{ $l }}</a>
                 @endforeach
             </div>
             <div class="seg">
-                @foreach (['all'=>'All','active'=>'Active','completed'=>'Completed','cancelled'=>'Cancelled'] as $k=>$l)
+                @foreach (['all'=>'All','active'=>'Active','completed'=>'Completed'] as $k=>$l)
                     <a href="{{ route('history.index', array_merge(request()->query(), ['status_filter'=>$k])) }}" class="{{ $statusFilter===$k?'on':'' }}">{{ $l }}</a>
                 @endforeach
             </div>
@@ -28,6 +44,9 @@
                 @endforeach
             </div>
         </div>
+        @else
+        <div class="mb-3" style="font-size:13px;color:var(--gray)">Searching for "<strong style="color:var(--label)">{{ request('search') }}</strong>"</div>
+        @endif
 
         <div class="table-responsive">
             <table class="ios-table">
@@ -41,14 +60,14 @@
                     @forelse ($tickets as $ticket)
                         @php
                             $dur = '-';
-                            if($ticket->exit_time){$d=\Carbon\Carbon::parse($ticket->entry_time)->diff(\Carbon\Carbon::parse($ticket->exit_time));$dur=($d->days?$d->days.'d ':'').$d->h.'h '.$d->i.'m';}
-                            elseif($ticket->status==='active'){$d=\Carbon\Carbon::parse($ticket->entry_time)->diff(now());$dur=($d->days?$d->days.'d ':'').$d->h.'h '.$d->i.'m';}
+                            if($ticket->exit_time){ $d=\Carbon\Carbon::parse($ticket->entry_time)->diff(\Carbon\Carbon::parse($ticket->exit_time)); $dur=($d->days?$d->days.'d ':'').$d->h.'h '.$d->i.'m'; }
+                            elseif($ticket->status==='active'){ $d=\Carbon\Carbon::parse($ticket->entry_time)->diff(now()); $dur=($d->days?$d->days.'d ':'').$d->h.'h '.$d->i.'m'; }
                         @endphp
                         <tr>
-                            <td style="font-weight:600">{{ $ticket->ticket_id }}</td>
+                            <td style="font-weight:600;white-space:nowrap">{{ $ticket->ticket_id }}</td>
                             <td>
                                 @if($ticket->vehicle->plate_number)
-                                    <a href="{{ route('history.vehicle', $ticket->vehicle->plate_number) }}" style="color:var(--blue);font-weight:600">{{ $ticket->vehicle->plate_number }}</a>
+                                    <a href="{{ route('history.vehicle', $ticket->vehicle->plate_number) }}" style="color:var(--blue);font-weight:700">{{ $ticket->vehicle->plate_number }}</a>
                                 @else
                                     <span style="color:var(--gray)">No plate</span>
                                 @endif
@@ -61,7 +80,7 @@
                             <td style="font-weight:600">{{ $ticket->payment?'$'.number_format($ticket->payment->total_fee,2):'-' }}</td>
                             <td><span class="pill {{ $ticket->status==='active'?'pill-green':($ticket->status==='completed'?'pill-blue':'pill-gray') }}">{{ ucfirst($ticket->status) }}</span></td>
                             @if(auth()->user()->isAdmin())
-                                <td style="font-size:12px;color:var(--gray)">{{ $ticket->staff->full_name??'-' }}</td>
+                                <td style="font-size:12px;color:var(--gray);white-space:nowrap">{{ $ticket->staff->full_name??'-' }}</td>
                             @endif
                         </tr>
                     @empty

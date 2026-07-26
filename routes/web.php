@@ -48,8 +48,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.updateProfile');
     Route::get('/settings/password', [SettingsController::class, 'changePassword'])->name('settings.password');
     Route::post('/settings/password', [SettingsController::class, 'updatePassword'])->name('settings.updatePassword');
-    Route::get('/settings/system', [SettingsController::class, 'systemSettings'])->name('settings.system');
-    Route::post('/settings/system', [SettingsController::class, 'updateSystemSettings'])->name('settings.updateSystem');
 
     Route::middleware('admin')->group(function () {
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');

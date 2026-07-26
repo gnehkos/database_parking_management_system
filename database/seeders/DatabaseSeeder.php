@@ -114,15 +114,5 @@ class DatabaseSeeder extends Seeder
             ['ticket_id'=>'T827','staff_id'=>1,'duration'=>2.50,'total_fee'=>0.25,'payment_method'=>'cash','paid_at'=>'2026-06-09 10:30:00'],
             ['ticket_id'=>'T66382','staff_id'=>1,'duration'=>0.07,'total_fee'=>0.25,'payment_method'=>'cash','paid_at'=>'2026-06-18 16:04:00'],
         ]);
-
-        DB::table('system_settings')->insert([
-            ['setting_key'=>'facility_name','setting_value'=>"Parkin'",'updated_at'=>now()],
-            ['setting_key'=>'facility_address','setting_value'=>'Phnom Penh, Cambodia','updated_at'=>now()],
-            ['setting_key'=>'currency','setting_value'=>'USD','updated_at'=>now()],
-            ['setting_key'=>'timezone','setting_value'=>'Asia/Phnom_Penh','updated_at'=>now()],
-            ['setting_key'=>'max_parking_hours','setting_value'=>'24','updated_at'=>now()],
-            ['setting_key'=>'receipt_footer_message','setting_value'=>'Thank you for parking with us!','updated_at'=>now()],
-            ['setting_key'=>'khr_exchange_rate','setting_value'=>'4000','updated_at'=>now()],
-        ]);
     }
 }

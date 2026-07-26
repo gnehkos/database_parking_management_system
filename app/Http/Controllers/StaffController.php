@@ -6,24 +6,19 @@ use App\Models\Staff;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class StaffController extends Controller
 {
     public function index(Request $request)
     {
         $query = Staff::orderBy('created_at', 'asc');
-
         if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('full_name', 'like', '%' . $search . '%')
-                  ->orWhere('username', 'like', '%' . $search . '%');
-            });
+            $s = $request->search;
+            $query->where(fn($q) => $q->where('full_name','like','%'.$s.'%')->orWhere('username','like','%'.$s.'%'));
         }
-
         $staffMembers = $query->get();
         $activeCount = Staff::where('status', 'active')->count();
-
         return view('staff.index', compact('staffMembers', 'activeCount'));
     }
 
@@ -35,23 +30,23 @@ class StaffController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'username' => ['required', 'string', 'max:50', 'unique:staff,username'],
-            'full_name' => ['required', 'string', 'max:255'],
-            'gender' => ['required', 'in:male,female'],
-            'role' => ['required', 'in:admin,staff'],
-            'phone_number' => ['required', 'string', 'max:20'],
+            'username'      => ['required', 'string', 'max:50', 'unique:staff,username'],
+            'full_name'     => ['required', 'string', 'max:255'],
+            'gender'        => ['required', 'in:male,female'],
+            'role'          => ['required', 'in:admin,staff'],
+            'phone_number'  => ['required', 'string', 'max:20'],
             'date_of_birth' => ['required', 'date'],
             'profile_image' => ['nullable', 'image', 'max:2048'],
         ]);
 
         $data = [
-            'username' => $request->username,
+            'username'      => $request->username,
             'password_hash' => Hash::make('password'),
-            'full_name' => $request->full_name,
-            'gender' => $request->gender,
-            'role' => $request->role,
-            'phone_number' => $request->phone_number,
-            'status' => 'active',
+            'full_name'     => $request->full_name,
+            'gender'        => $request->gender,
+            'role'          => $request->role,
+            'phone_number'  => $request->phone_number,
+            'status'        => 'active',
             'date_of_birth' => $request->date_of_birth,
         ];
 
@@ -60,7 +55,6 @@ class StaffController extends Controller
         }
 
         Staff::create($data);
-
         return redirect()->route('staff.index')->with('success', 'Staff member added.');
     }
 
@@ -77,15 +71,16 @@ class StaffController extends Controller
     public function update(Request $request, Staff $staff)
     {
         $request->validate([
-            'full_name' => ['required', 'string', 'max:255'],
-            'gender' => ['required', 'in:male,female'],
-            'role' => ['required', 'in:admin,staff'],
-            'phone_number' => ['required', 'string', 'max:20'],
+            'username'      => ['required', 'string', 'max:50', Rule::unique('staff', 'username')->ignore($staff->staff_id, 'staff_id')],
+            'full_name'     => ['required', 'string', 'max:255'],
+            'gender'        => ['required', 'in:male,female'],
+            'role'          => ['required', 'in:admin,staff'],
+            'phone_number'  => ['required', 'string', 'max:20'],
             'date_of_birth' => ['required', 'date'],
             'profile_image' => ['nullable', 'image', 'max:2048'],
         ]);
 
-        $data = $request->only('full_name', 'gender', 'role', 'phone_number', 'date_of_birth');
+        $data = $request->only('username', 'full_name', 'gender', 'role', 'phone_number', 'date_of_birth');
 
         if ($request->hasFile('profile_image')) {
             if ($staff->profile_image) {
@@ -95,7 +90,6 @@ class StaffController extends Controller
         }
 
         $staff->update($data);
-
         return redirect()->route('staff.show', $staff)->with('success', 'Staff updated.');
     }
 
@@ -103,7 +97,7 @@ class StaffController extends Controller
     {
         $newStatus = $staff->status === 'active' ? 'deactivated' : 'active';
         $staff->update(['status' => $newStatus]);
-        $message = $staff->full_name . ($newStatus === 'active' ? ' activated.' : ' deactivated.');
-        return redirect()->route('staff.index')->with('success', $message);
+        $msg = $staff->full_name . ($newStatus === 'active' ? ' activated.' : ' deactivated.');
+        return redirect()->route('staff.index')->with('success', $msg);
     }
 }

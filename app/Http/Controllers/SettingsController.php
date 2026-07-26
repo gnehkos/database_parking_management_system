@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -69,25 +68,4 @@ class SettingsController extends Controller
         return back()->with('success', 'Password updated.');
     }
 
-    public function systemSettings()
-    {
-        $settings = SystemSetting::all()->keyBy('setting_key');
-        return view('settings.system', compact('settings'));
-    }
-
-    public function updateSystemSettings(Request $request)
-    {
-        $keys = ['facility_name', 'facility_address', 'currency', 'timezone', 'max_parking_hours', 'receipt_footer_message', 'khr_exchange_rate'];
-
-        foreach ($keys as $key) {
-            if ($request->has($key)) {
-                SystemSetting::where('setting_key', $key)->update([
-                    'setting_value' => $request->input($key),
-                    'updated_at' => now(),
-                ]);
-            }
-        }
-
-        return back()->with('success', 'System settings updated.');
-    }
 }

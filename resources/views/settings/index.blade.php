@@ -10,12 +10,6 @@
                 <div class="d-flex align-items-center gap-3"><div style="width:36px;height:36px;border-radius:10px;background:rgba(255,149,0,0.1);display:flex;align-items:center;justify-content:center"><i class="bi bi-lock-fill" style="color:var(--orange)"></i></div><div><div style="font-weight:600">Change Password</div><div style="font-size:12px;color:var(--gray)">Update your account password</div></div></div>
                 <i class="bi bi-chevron-right" style="color:var(--gray2)"></i>
             </a>
-            @if(auth()->user()->isAdmin())
-                <a href="{{ route('settings.system') }}" class="grouped-row" style="color:var(--label)">
-                    <div class="d-flex align-items-center gap-3"><div style="width:36px;height:36px;border-radius:10px;background:rgba(255,59,48,0.1);display:flex;align-items:center;justify-content:center"><i class="bi bi-gear-fill" style="color:var(--red)"></i></div><div><div style="font-weight:600">System Settings</div><div style="font-size:12px;color:var(--gray)">Facility, currency, timezone</div></div></div>
-                    <i class="bi bi-chevron-right" style="color:var(--gray2)"></i>
-                </a>
-            @endif
         </div>
         <form method="POST" action="{{ route('logout') }}">@csrf
             <button class="ios-btn w-100" style="background:rgba(255,59,48,0.1);color:var(--red)"><i class="bi bi-box-arrow-right me-1"></i>Sign Out</button>
