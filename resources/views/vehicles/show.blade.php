@@ -9,7 +9,7 @@
             <a href="{{ route('vehicles.edit', $vehicle->vehicle_id) }}" class="ios-btn btn-ghost btn-sm-ios"><i class="bi bi-pencil me-1"></i> Edit</a>
             <button class="ios-btn btn-danger-ios btn-sm-ios" data-bs-toggle="modal" data-bs-target="#confirmModal"
                 data-title="Remove Vehicle"
-                data-message="Remove {{ $vehicle->plate_number ?? 'this vehicle' }}? If it has parking history, it will be soft-deleted (hidden from lists but history is preserved)."
+                data-message="Remove {{ $vehicle->plate_number ?? 'this vehicle' }}?"
                 data-form-id="soft-del-{{ $vehicle->vehicle_id }}"
                 data-action="Remove">
                 <i class="bi bi-eye-slash-fill me-1"></i> Remove
@@ -17,18 +17,6 @@
             <form id="soft-del-{{ $vehicle->vehicle_id }}" method="POST" action="{{ route('vehicles.destroy', $vehicle->vehicle_id) }}" style="display:none">
                 @csrf @method('DELETE')
             </form>
-            @if(auth()->user()->isAdmin())
-                <button class="ios-btn btn-danger-ios btn-sm-ios" data-bs-toggle="modal" data-bs-target="#confirmModal"
-                    data-title="Permanently Delete Vehicle"
-                    data-message="Permanently delete {{ $vehicle->plate_number ?? 'this vehicle' }} AND all its parking history? This cannot be undone."
-                    data-form-id="hard-del-{{ $vehicle->vehicle_id }}"
-                    data-action="Delete Permanently" data-danger="1">
-                    <i class="bi bi-trash-fill me-1"></i> Hard Delete
-                </button>
-                <form id="hard-del-{{ $vehicle->vehicle_id }}" method="POST" action="{{ route('vehicles.hardDelete', $vehicle->vehicle_id) }}" style="display:none">
-                    @csrf @method('DELETE')
-                </form>
-            @endif
         </div>
     </div>
 

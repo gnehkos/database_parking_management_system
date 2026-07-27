@@ -9,7 +9,7 @@
     <style>
         * { font-family: 'Inter', -apple-system, sans-serif; }
         body { background: #f2f2f7; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .login-logo { width: 68px; height: 68px; background: linear-gradient(145deg, #007aff, #5856d6); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; box-shadow: 0 10px 28px rgba(0,122,255,0.28); }
+        .login-logo { width: 68px; height: 68px; background: #007aff; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; }
         .login-logo i { font-size: 30px; color: #fff; }
         .login-card { background: #fff; border-radius: 22px; padding: 32px; border: 1px solid rgba(0,0,0,0.07); max-width: 400px; width: 100%; }
         .field-label { font-size: 12px; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block; }

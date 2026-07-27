@@ -51,9 +51,15 @@
                                 @endif
                             </div>
                             <div class="text-end" style="flex-shrink:0;margin-left:12px">
-                                <div style="font-size:20px;font-weight:800;color:var(--blue);cursor:pointer" onclick="window.location='{{ route('checkout.payment', $ticket->ticket_id) }}'">
+                                <div style="font-size:20px;font-weight:800;color:var(--blue);cursor:pointer"
+                                     onclick="window.location='{{ route('checkout.payment', $ticket->ticket_id) }}'">
                                     ${{ number_format($ticket->calculated_fee,2) }}
                                 </div>
+                                <a href="{{ route('checkin.ticket', $ticket->ticket_id) }}"
+                                   class="ios-btn btn-ghost btn-sm-ios mt-2"
+                                   onclick="event.stopPropagation()">
+                                    <i class="bi bi-ticket-perforated me-1"></i> Ticket
+                                </a>
                                 @if(auth()->user()->isAdmin())
                                     <form method="POST" action="{{ route('tickets.cancel', $ticket->ticket_id) }}" id="cancel-{{ $ticket->ticket_id }}">
                                         @csrf

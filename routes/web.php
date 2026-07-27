@@ -37,6 +37,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout/complete/{ticketId}', [CheckOutController::class, 'complete'])->name('checkout.complete');
     Route::post('/tickets/{ticketId}/cancel', [CheckOutController::class, 'cancelTicket'])->name('tickets.cancel');
     Route::post('/tickets/{ticketId}/void-payment', [CheckOutController::class, 'voidPayment'])->name('tickets.voidPayment');
+    Route::post('/tickets/{ticketId}/correct-vehicle', [TicketController::class, 'correctVehicle'])->name('tickets.correctVehicle');
 
     Route::get('/slots', [SlotMapController::class, 'index'])->name('slots.index');
     Route::get('/slots/{slot:slot_id}', [SlotMapController::class, 'show'])->name('slots.show');

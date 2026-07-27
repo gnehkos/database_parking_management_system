@@ -30,7 +30,7 @@
         <form method="POST" action="{{ route('checkout.process', $ticket->ticket_id) }}">
             @csrf
             <div class="section-hdr">Payment Method</div>
-            @foreach ([['cash','Cash','Physical currency','bi-banknote'],['card','Card','Credit / debit','bi-credit-card-fill'],['qrScan','QR Scan','KHQR / ABA / WING','bi-qr-code']] as [$val,$lbl,$desc,$icon])
+            @foreach ([['cash','Cash','Physical currency','bi-cash-stack'],['card','Card','Credit / debit','bi-credit-card-fill'],['qrScan','QR Scan','KHQR / ABA / WING','bi-qr-code']] as [$val,$lbl,$desc,$icon])
                 <label class="card-ios card-ios-p d-flex align-items-center justify-content-between mb-2" style="cursor:pointer">
                     <div class="d-flex align-items-center gap-3">
                         <div style="width:42px;height:42px;border-radius:12px;background:var(--gray6);display:flex;align-items:center;justify-content:center">

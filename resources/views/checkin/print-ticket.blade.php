@@ -37,10 +37,17 @@
     <div class="row"><span class="label">Short Stay (&lt;5h)</span><span class="val">${{ number_format($ticket->feeRate->short_stay_fee, 2) }}</span></div>
     <div class="row"><span class="label">Long Stay (5h+)</span><span class="val">${{ number_format($ticket->feeRate->long_stay_fee, 2) }}</span></div>
     <div class="row"><span class="label">Staff</span><span class="val">{{ $ticket->staff->full_name ?? 'N/A' }}</span></div>
-    <div class="barcode">
-        <div class="barcode-text">{{ $ticket->barcode }}</div>
-        <div class="barcode-hint">Present at exit</div>
-    </div>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+        <script>
+            JsBarcode("#barcode", "{{ $ticket->barcode }}", {
+                format: "CODE128",
+                width: 2,
+                height: 60,
+                displayValue: false,
+                background: "transparent",
+                lineColor: "#000"
+            });
+        </script>
     <div class="footer">Thank you for parking with us.</div>
 </body>
 </html>

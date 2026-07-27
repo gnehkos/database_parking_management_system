@@ -48,10 +48,9 @@
         .brand { display: flex; align-items: center; gap: 10px; padding: 8px 10px 16px; }
         .brand-logo {
             width: 38px; height: 38px;
-            background: linear-gradient(145deg, #007aff 0%, #5856d6 100%);
+            background: #007aff;
             border-radius: 11px; display: flex; align-items: center; justify-content: center;
             color: #fff; font-size: 17px;
-            box-shadow: 0 4px 12px rgba(0,122,255,0.3);
         }
         .brand-text { line-height: 1.2; }
         .brand-name { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
@@ -99,7 +98,7 @@
         .nav-island .user-pill:hover .avatar { transform: scale(1.05); }
         .avatar {
             width: 30px; height: 30px; border-radius: 50%;
-            background: linear-gradient(135deg, var(--blue), #5856d6);
+            background: var(--blue);
             display: flex; align-items: center; justify-content: center;
             color: #fff; font-size: 11px; font-weight: 700;
             transition: transform 0.15s; overflow: hidden;

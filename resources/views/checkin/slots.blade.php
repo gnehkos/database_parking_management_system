@@ -46,7 +46,7 @@
                             }
                         @endphp
                         <button type="button" class="slot-btn"
-                            style="width:58px;height:46px;border-radius:10px;border:none;background:{{ $bg }};color:{{ $txtColor }};font-size:12px;font-weight:700;cursor:{{ $isAvail?'pointer':'not-allowed' }};opacity:{{ $isAvail?'1':'0.45' }};transition:all 0.15s"
+                            style="width:58px;height:46px;border-radius:10px;border:none;background:{{ $bg }};color:#fff;font-size:12px;font-weight:700;cursor:{{ $isAvail?'pointer':'not-allowed' }};opacity:{{ $isAvail?'1':'0.45' }};transition:all 0.15s"
                             {{ !$isAvail?'disabled':'' }}
                             data-slot-id="{{ $slot->slot_id }}" data-slot-name="{{ $slot->slot_number }}"
                             onclick="selectSlot(this)">
