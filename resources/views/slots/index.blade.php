@@ -1,156 +1,200 @@
-<x-layout title="Slot Map">
-@php
-$zoneColors = [
-    'car'        => ['bg'=>'#e8f1ff','border'=>'#007aff','dot'=>'#007aff','label'=>'#0058cc','slot_avail'=>'#007aff','name'=>'Car Zone'],
-    'motorcycle' => ['bg'=>'#e8f9ee','border'=>'#34c759','dot'=>'#34c759','label'=>'#1a7a30','slot_avail'=>'#34c759','name'=>'Motorcycle Zone'],
-    'tricycle'   => ['bg'=>'#f3eaff','border'=>'#af52de','dot'=>'#af52de','label'=>'#7a2da8','slot_avail'=>'#af52de','name'=>'Tricycle Zone'],
-    'bike'       => ['bg'=>'#fff3e0','border'=>'#ff9500','dot'=>'#ff9500','label'=>'#b86a00','slot_avail'=>'#ff9500','name'=>'Bike Zone'],
-];
-@endphp
+@extends('components.layout')
 
-<div class="page-header d-flex justify-content-between align-items-start">
-    <div><div class="page-title">Slot Map</div><div class="page-sub">Real-time parking overview</div></div>
-</div>
+@section('title', 'Slot Map')
 
-<div class="row g-3 mb-4">
-    <div class="col">
-        <div class="stat-card d-flex align-items-center gap-3">
-            <div style="width:40px;height:40px;border-radius:12px;background:rgba(142,142,147,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                <i class="bi bi-grid-3x3-gap-fill" style="color:var(--gray);font-size:18px"></i>
-            </div>
-            <div><div class="stat-label">Total Slots</div><div class="stat-val" style="font-size:22px">{{ $total }}</div></div>
-        </div>
+@section('content')
+
+{{-- Page header --}}
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap">
+    <div>
+        <div style="font-size:26px;font-weight:800;letter-spacing:-0.5px;color:var(--label)">Slot Map</div>
+        <div style="font-size:14px;color:var(--gray);margin-top:2px">Real-time parking slot overview</div>
     </div>
-    <div class="col">
-        <div class="stat-card d-flex align-items-center gap-3">
-            <div style="width:40px;height:40px;border-radius:12px;background:rgba(52,199,89,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                <i class="bi bi-check-circle-fill" style="color:var(--green);font-size:18px"></i>
-            </div>
-            <div><div class="stat-label">Available</div><div class="stat-val" style="font-size:22px;color:var(--green)">{{ $available }}</div></div>
-        </div>
-    </div>
-    <div class="col">
-        <div class="stat-card d-flex align-items-center gap-3">
-            <div style="width:40px;height:40px;border-radius:12px;background:rgba(255,59,48,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                <i class="bi bi-car-front-fill" style="color:var(--red);font-size:18px"></i>
-            </div>
-            <div><div class="stat-label">Occupied</div><div class="stat-val" style="font-size:22px;color:var(--red)">{{ $occupied }}</div></div>
-        </div>
-    </div>
-    <div class="col">
-        <div class="stat-card d-flex align-items-center gap-3">
-            <div style="width:40px;height:40px;border-radius:12px;background:rgba(255,149,0,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                <i class="bi bi-cone-striped" style="color:var(--orange);font-size:18px"></i>
-            </div>
-            <div><div class="stat-label">Maintenance</div><div class="stat-val" style="font-size:22px;color:var(--orange)">{{ $maintenance }}</div></div>
-        </div>
-    </div>
-    <div class="col">
-        <div class="stat-card">
-            <div class="stat-label mb-2">Occupancy</div>
-            <div style="font-size:22px;font-weight:800;margin-bottom:8px">{{ $occupancyPercent }}%</div>
-            <div style="height:8px;background:var(--gray5);border-radius:100px;overflow:hidden">
-                <div style="width:{{ $occupancyPercent }}%;height:100%;background:{{ $occupancyPercent > 80 ? 'var(--red)' : ($occupancyPercent > 50 ? 'var(--orange)' : 'var(--green)') }};border-radius:100px;transition:width 0.5s ease"></div>
-            </div>
-        </div>
+    <div class="seg">
+        <button class="on" id="btn-aerial" onclick="setView('aerial')">Aerial</button>
+        <button id="btn-list" onclick="setView('list')">List</button>
     </div>
 </div>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div class="seg" id="viewToggle">
-        <button class="on" id="aerialBtn" onclick="switchView('aerial')"><i class="bi bi-map-fill me-1"></i>Aerial View</button>
-        <button id="listBtn" onclick="switchView('list')"><i class="bi bi-list-ul me-1"></i>List View</button>
+{{-- Stat cards --}}
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem">
+    <div class="stat-card">
+        <div class="stat-label">Total Slots</div>
+        <div class="stat-val">{{ $total }}</div>
     </div>
-    <div class="d-flex gap-3 align-items-center" style="font-size:12px;font-weight:600">
-        <span style="color:var(--gray)">LEGEND</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--green);margin-right:4px"></span>Available</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--red);margin-right:4px"></span>Occupied</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--orange);margin-right:4px"></span>Maintenance</span>
+    <div class="stat-card">
+        <div class="stat-label" style="color:var(--green)">Available</div>
+        <div class="stat-val" style="color:var(--green)">{{ $available }}</div>
+        <div class="stat-sub">{{ $total > 0 ? round($available / $total * 100) : 0 }}% free</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label" style="color:var(--red)">Occupied</div>
+        <div class="stat-val" style="color:var(--red)">{{ $occupied }}</div>
+        <div class="stat-sub">{{ $total > 0 ? round($occupied / $total * 100) : 0 }}% in use</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label" style="color:var(--orange)">Maintenance</div>
+        <div class="stat-val" style="color:var(--orange)">{{ $maintenance }}</div>
+        <div class="stat-sub">{{ $total > 0 ? round($maintenance / $total * 100) : 0 }}% unavail.</div>
     </div>
 </div>
 
-<div id="aerialView">
-    <div class="row g-3">
+{{-- ======================== AERIAL VIEW ======================== --}}
+<div id="view-aerial">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+
         @foreach ($zones as $zone)
-            @php $zc = $zoneColors[$zone->vehicle_type] ?? $zoneColors['car']; @endphp
-            <div class="col-12">
-                <div style="background:{{ $zc['bg'] }};border:1.5px solid {{ $zc['border'] }}22;border-radius:16px;padding:20px">
-                    <div class="d-flex align-items-center gap-2 mb-3">
-                        <div style="width:10px;height:10px;border-radius:50%;background:{{ $zc['dot'] }}"></div>
-                        <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:{{ $zc['label'] }}">{{ $zc['name'] }} &mdash; {{ $zone->zone_name }}</span>
-                        @php
-                            $zAvail = $zone->slots->filter(fn($s)=>$s->real_status==='available')->count();
-                            $zOcc = $zone->slots->filter(fn($s)=>$s->real_status==='occupied')->count();
-                        @endphp
-                        <span class="ms-auto" style="font-size:12px;color:{{ $zc['label'] }};font-weight:600">{{ $zAvail }} free &middot; {{ $zOcc }} occupied</span>
+            @php
+                $zFree  = $zone->slots->filter(fn($s) =>
+                    $s->status !== 'maintenance' && !isset($activeTickets[$s->slot_id])
+                )->count();
+                $zTotal = $zone->slots->count();
+                $zOcc   = $zone->slots->filter(fn($s) =>
+                    $s->status !== 'maintenance' && isset($activeTickets[$s->slot_id])
+                )->count();
+                $zMaint = $zone->slots->where('status', 'maintenance')->count();
+            @endphp
+
+            <div class="card-ios card-ios-p">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+                    <div>
+                        <div style="font-size:14px;font-weight:600;color:var(--label)">{{ $zone->zone_name }}</div>
+                        <div style="font-size:12px;color:var(--gray);margin-top:2px">{{ ucfirst($zone->vehicle_type) }}</div>
                     </div>
-                    <div class="d-flex flex-wrap gap-2">
-                        @foreach ($zone->slots as $slot)
-                            @php
-                                $rs = $slot->real_status;
-                                $bg = match($rs) { 'occupied'=>'#ff3b30', 'maintenance'=>'#ff9500', default=>$zc['slot_avail'] };
-                                $opacity = $rs === 'maintenance' ? '0.65' : '1';
-                                $plate = $slot->active_ticket?->vehicle?->plate_number;
-                            @endphp
-                            <a href="{{ route('slots.show', $slot->slot_id) }}"
-                                title="{{ $plate ?? ucfirst($rs) }}"
-                                style="width:64px;height:56px;border-radius:12px;background:{{ $bg }};color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:12px;opacity:{{ $opacity }};transition:all 0.15s;box-shadow:0 2px 8px {{ $bg }}44;position:relative">
-                                {{ $slot->slot_number }}
-                                @if ($plate)
-                                    <span style="font-size:8px;font-weight:600;opacity:0.9;margin-top:2px;max-width:58px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 2px">{{ $plate }}</span>
-                                @elseif ($rs === 'maintenance')
-                                    <i class="bi bi-cone-striped" style="font-size:10px;margin-top:2px"></i>
-                                @endif
-                            </a>
-                        @endforeach
+                    <div style="text-align:right;flex-shrink:0">
+                        <div style="font-size:20px;font-weight:700;line-height:1;color:{{ $zFree > 0 ? 'var(--green)' : 'var(--red)' }}">
+                            {{ $zFree }}
+                        </div>
+                        <div style="font-size:11px;color:var(--gray);margin-top:2px">of {{ $zTotal }} free</div>
                     </div>
                 </div>
+
+                <div style="display:flex;flex-wrap:wrap;gap:5px">
+                    @foreach ($zone->slots as $slot)
+                        @php
+                            if ($slot->status === 'maintenance') {
+                                $rs = 'maintenance';
+                                $tk = null;
+                            } else {
+                                $tk = $activeTickets[$slot->slot_id] ?? null;
+                                $rs = $tk ? 'occupied' : 'available';
+                            }
+                            $bg = match($rs) {
+                                'occupied'    => 'var(--red)',
+                                'maintenance' => 'var(--orange)',
+                                default       => 'var(--green)',
+                            };
+                        @endphp
+                        <a href="{{ route('slots.show', $slot->slot_id) }}"
+                           style="background:{{ $bg }};width:52px;height:42px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-decoration:none;gap:2px;flex-shrink:0;opacity:{{ $rs === 'maintenance' ? '0.7' : '1' }}"
+                           title="{{ $slot->slot_number }} — {{ $rs }}{{ $tk?->vehicle ? ' · ' . $tk->vehicle->plate_number : '' }}">
+                            <span style="font-size:11px;font-weight:600;color:#fff;line-height:1;letter-spacing:0.02em">
+                                {{ $slot->slot_number }}
+                            </span>
+                            @if ($tk?->vehicle)
+                                <span style="font-size:8px;color:rgba(255,255,255,0.85);line-height:1;max-width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px">
+                                    {{ $tk->vehicle->plate_number }}
+                                </span>
+                            @elseif ($rs === 'maintenance')
+                                <span style="font-size:8px;color:rgba(255,255,255,0.8);line-height:1">Maint.</span>
+                            @endif
+                        </a>
+                    @endforeach
+                </div>
+
+                @if ($zOcc > 0 || $zMaint > 0)
+                    <div style="display:flex;gap:12px;margin-top:12px;padding-top:10px;border-top:0.5px solid var(--gray5)">
+                        @if ($zOcc > 0)
+                            <div style="font-size:11px;color:var(--gray)">
+                                <span style="color:var(--red);font-weight:600">{{ $zOcc }}</span> occupied
+                            </div>
+                        @endif
+                        @if ($zMaint > 0)
+                            <div style="font-size:11px;color:var(--gray)">
+                                <span style="color:var(--orange);font-weight:600">{{ $zMaint }}</span> maintenance
+                            </div>
+                        @endif
+                    </div>
+                @endif
             </div>
         @endforeach
     </div>
-</div>
 
-<div id="listView" style="display:none">
-    <div class="card-ios">
-        <table class="ios-table">
-            <thead>
-                <tr><th>Slot</th><th>Zone</th><th>Type</th><th>Status</th><th>Vehicle</th><th>Ticket</th><th style="width:50px"></th></tr>
-            </thead>
-            <tbody>
-                @foreach ($zones as $zone)
-                    @php $zc = $zoneColors[$zone->vehicle_type] ?? $zoneColors['car']; @endphp
-                    @foreach ($zone->slots as $slot)
-                        @php $rs = $slot->real_status; $at = $slot->active_ticket; @endphp
-                        <tr>
-                            <td style="font-weight:700">
-                                <span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:30px;border-radius:8px;background:{{ match($rs){'occupied'=>'rgba(255,59,48,0.1)','maintenance'=>'rgba(255,149,0,0.1)',default=>'rgba(52,199,89,0.1)'} }};color:{{ match($rs){'occupied'=>'var(--red)','maintenance'=>'var(--orange)',default=>'var(--green)'} }};font-size:13px">{{ $slot->slot_number }}</span>
-                            </td>
-                            <td style="font-size:13px;color:var(--gray)">{{ $zone->zone_code }}</td>
-                            <td><span class="type-badge type-badge-{{ $zone->vehicle_type }}">{{ ucfirst($zone->vehicle_type) }}</span></td>
-                            <td>
-                                <span class="pill {{ match($rs){'occupied'=>'pill-red','maintenance'=>'pill-orange',default=>'pill-green'} }}">
-                                    {{ ucfirst($rs) }}
-                                </span>
-                            </td>
-                            <td style="font-weight:600">{{ $at?->vehicle?->plate_number ?? ($rs==='occupied'?'Unknown':'—') }}</td>
-                            <td style="color:var(--gray);font-size:13px">{{ $at?->ticket_id ?? '—' }}</td>
-                            <td><a href="{{ route('slots.show', $slot->slot_id) }}" class="ios-btn btn-ghost btn-sm-ios"><i class="bi bi-chevron-right"></i></a></td>
-                        </tr>
-                    @endforeach
-                @endforeach
-            </tbody>
-        </table>
+    {{-- Legend --}}
+    <div style="display:flex;gap:16px;margin-top:14px;padding:0 2px">
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray)">
+            <div style="width:10px;height:10px;border-radius:3px;background:var(--green)"></div> Available
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray)">
+            <div style="width:10px;height:10px;border-radius:3px;background:var(--red)"></div> Occupied
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gray)">
+            <div style="width:10px;height:10px;border-radius:3px;background:var(--orange)"></div> Maintenance
+        </div>
     </div>
 </div>
 
-<x-slot:scripts>
+{{-- ======================== LIST VIEW ======================== --}}
+<div id="view-list" style="display:none">
+    @foreach ($zones as $zone)
+        <div style="margin-bottom:20px">
+            <div style="font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;padding:0 2px">
+                {{ $zone->zone_name }} &middot; {{ ucfirst($zone->vehicle_type) }}
+            </div>
+            <div class="card-ios">
+                @foreach ($zone->slots as $slot)
+                    @php
+                        if ($slot->status === 'maintenance') {
+                            $rs = 'maintenance'; $tk = null;
+                        } else {
+                            $tk = $activeTickets[$slot->slot_id] ?? null;
+                            $rs = $tk ? 'occupied' : 'available';
+                        }
+                        $dot = match($rs) {
+                            'occupied'    => 'var(--red)',
+                            'maintenance' => 'var(--orange)',
+                            default       => 'var(--green)',
+                        };
+                    @endphp
+                    <a href="{{ route('slots.show', $slot->slot_id) }}"
+                       class="grouped-row"
+                       style="text-decoration:none;display:flex;align-items:center;justify-content:space-between;padding:11px 14px">
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <div style="width:8px;height:8px;border-radius:50%;background:{{ $dot }};flex-shrink:0"></div>
+                            <div>
+                                <div style="font-size:14px;font-weight:500;color:var(--label)">{{ $slot->slot_number }}</div>
+                                @if ($tk?->vehicle)
+                                    <div style="font-size:12px;color:var(--gray);margin-top:1px">{{ $tk->vehicle->plate_number }}</div>
+                                @endif
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            @if ($rs === 'available')
+                                <span class="pill pill-green">Available</span>
+                            @elseif ($rs === 'occupied')
+                                <span class="pill pill-red">Occupied</span>
+                            @else
+                                <span class="pill pill-orange">Maintenance</span>
+                            @endif
+                            <i class="bi bi-chevron-right" style="color:var(--gray);font-size:12px"></i>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    @endforeach
+</div>
+
 <script>
-    function switchView(v) {
-        document.getElementById('aerialView').style.display = v==='aerial' ? 'block' : 'none';
-        document.getElementById('listView').style.display = v==='list' ? 'block' : 'none';
-        document.getElementById('aerialBtn').className = v==='aerial' ? 'on' : '';
-        document.getElementById('listBtn').className = v==='list' ? 'on' : '';
-    }
+function setView(v) {
+    document.getElementById('view-aerial').style.display = v === 'aerial' ? 'block' : 'none';
+    document.getElementById('view-list').style.display   = v === 'list'   ? 'block' : 'none';
+    document.getElementById('btn-aerial').classList.toggle('on', v === 'aerial');
+    document.getElementById('btn-list').classList.toggle('on', v === 'list');
+    localStorage.setItem('slotView', v);
+}
+const saved = localStorage.getItem('slotView');
+if (saved) setView(saved);
 </script>
-</x-slot:scripts>
-</x-layout>
+
+@endsection

@@ -267,7 +267,11 @@
                     <i class="bi bi-check-circle-fill"></i> {{ session('success') }}
                 </div>
             @endif
-            {{ $slot }}
+            @hasSection('content')
+                @yield('content')
+            @else
+                {{ $slot }}
+            @endif
         </div>
     </div>
 

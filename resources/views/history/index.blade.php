@@ -91,8 +91,27 @@
                             </td>
                             <td><span class="pill {{ $ticket->status==='active'?'pill-green':($ticket->status==='completed'?'pill-blue':($ticket->status==='cancelled'?'pill-red':'pill-gray')) }}">{{ ucfirst($ticket->status) }}</span></td>
                             @if(auth()->user()->isAdmin())
-                                <td style="font-size:12px;color:var(--gray);white-space:nowrap">{{ $ticket->staff->full_name??'-' }}</td>
-                                <td><a href="{{ route('tickets.edit', $ticket->ticket_id) }}" class="ios-btn btn-ghost btn-sm-ios"><i class="bi bi-pencil-fill"></i></a></td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <a href="{{ route('tickets.edit', $ticket->ticket_id) }}" class="ios-btn btn-ghost btn-sm-ios">
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </a>
+                                        @if($ticket->status === 'completed' && $ticket->payment && $ticket->payment->status === 'paid')
+                                            <form method="POST" action="{{ route('tickets.voidPayment', $ticket->ticket_id) }}" id="void-{{ $ticket->ticket_id }}">
+                                                @csrf
+                                            </form>
+                                            <button type="button" class="ios-btn btn-danger-ios btn-sm-ios"
+                                                data-bs-toggle="modal" data-bs-target="#confirmModal"
+                                                data-title="Void Payment"
+                                                data-message="Void payment for ticket {{ $ticket->ticket_id }}? This will reopen the ticket as active and re-occupy the slot."
+                                                data-form-id="void-{{ $ticket->ticket_id }}"
+                                                data-action="Void Payment"
+                                                data-danger="true">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        @endif
+                                    </div>
+                                </td>
                             @endif
                         </tr>
                     @empty

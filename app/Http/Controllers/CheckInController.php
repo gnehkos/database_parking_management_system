@@ -13,44 +13,67 @@ use Illuminate\Support\Facades\DB;
 class CheckInController extends Controller
 {
     public function index()
-    {
-        $zones = ParkingZone::with('slots')->get();
-        $freeByType = [];
-        foreach ($zones as $zone) {
-            $type = $zone->vehicle_type;
-            $freeByType[$type] = ($freeByType[$type] ?? 0) + $zone->slots->where('status', 'available')->count();
-        }
-        return view('checkin.index', compact('freeByType'));
+{
+    $zones = ParkingZone::with('slots')->get();
+
+    $occupiedSlotIds = Ticket::where('status', 'active')
+        ->pluck('slot_id')
+        ->toArray();
+
+    $freeByType = [];
+    foreach ($zones as $zone) {
+        $free = $zone->slots->filter(fn($s) =>
+            $s->status !== 'maintenance' &&
+            !in_array($s->slot_id, $occupiedSlotIds)
+        )->count();
+        $freeByType[$zone->vehicle_type] = ($freeByType[$zone->vehicle_type] ?? 0) + $free;
     }
+
+    return view('checkin.index', compact('freeByType'));
+}
 
     public function slotSelection(Request $request)
     {
-        $request->validate([
-            'vehicle_type' => ['required', 'in:car,motorcycle,bike,tricycle'],
-            'plate_type'   => ['required', 'in:structured,custom'],
-        ]);
+    $request->validate([
+        'vehicle_type' => ['required', 'in:car,motorcycle,bike,tricycle'],
+        'plate_type'   => ['required', 'in:structured,custom'],
+    ]);
 
-        $vehicleType = $request->vehicle_type;
-        $plateNumber = $vehicleType === 'bike' ? null : ($request->plate_number ?: null);
-        $plateType   = $request->plate_type;
+    $vehicleType = $request->vehicle_type;
+    $plateType   = $request->plate_type;
+    $plateNumber = $vehicleType === 'bike' ? null : ($request->plate_number ?: null);
 
-        if ($plateNumber) {
-            $existing = Ticket::where('status', 'active')
-                ->whereHas('vehicle', fn($q) => $q->where('plate_number', $plateNumber))
-                ->with('slot')
-                ->first();
+    if ($plateNumber) {
+        $existing = Ticket::where('status', 'active')
+            ->whereHas('vehicle', fn($q) => $q->where('plate_number', $plateNumber))
+            ->with('slot')
+            ->first();
 
-            if ($existing) {
-                return back()->withErrors(['plate' => $plateNumber . ' is already checked in at Slot ' . ($existing->slot->slot_number ?? 'N/A') . '.']);
-            }
+        if ($existing) {
+            return back()->withErrors([
+                'plate' => $plateNumber . ' is already checked in at Slot ' . ($existing->slot->slot_number ?? 'N/A') . '.',
+            ]);
         }
-
-        $zones = ParkingZone::with('slots')->get();
-        $targetZone = $zones->firstWhere('vehicle_type', $vehicleType);
-        $availableCount = $targetZone ? $targetZone->slots->where('status', 'available')->count() : 0;
-
-        return view('checkin.slots', compact('zones', 'vehicleType', 'plateNumber', 'plateType', 'availableCount'));
     }
+
+    $zones = ParkingZone::with('slots')->get();
+
+    $activeTickets = Ticket::where('status', 'active')
+        ->get()
+        ->keyBy('slot_id');
+
+    $targetZone     = $zones->firstWhere('vehicle_type', $vehicleType);
+    $availableCount = $targetZone
+        ? $targetZone->slots->filter(fn($s) =>
+            $s->status !== 'maintenance' &&
+            !isset($activeTickets[$s->slot_id])
+          )->count()
+        : 0;
+
+    return view('checkin.slots', compact(
+        'zones', 'vehicleType', 'plateNumber', 'plateType', 'availableCount', 'activeTickets'
+    ));
+}
 
     public function assignSlot(Request $request)
     {

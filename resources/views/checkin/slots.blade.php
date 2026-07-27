@@ -32,9 +32,18 @@
                     @foreach ($zone->slots as $slot)
                         @php
                             $isTarget = $zone->vehicle_type === $vehicleType;
-                            $isAvail = $slot->status === 'available' && $isTarget;
-                            $bg = match($slot->status) { 'occupied'=>'var(--red)', 'maintenance'=>'var(--orange)', default=>$isTarget?'var(--green)':'var(--gray5)' };
-                            $txtColor = $slot->status==='available'&&!$isTarget ? 'var(--gray)' : '#fff';
+
+                            if ($slot->status === 'maintenance') {
+                                $isAvail = false;
+                                $bg      = 'var(--orange)';
+                            } elseif (!$isTarget) {
+                                $isAvail = false;
+                                $bg      = 'var(--gray)';
+                            } else {
+                                $hasActiveTicket = isset($activeTickets[$slot->slot_id]);
+                                $isAvail = !$hasActiveTicket;
+                                $bg      = $hasActiveTicket ? 'var(--red)' : 'var(--green)';
+                            }
                         @endphp
                         <button type="button" class="slot-btn"
                             style="width:58px;height:46px;border-radius:10px;border:none;background:{{ $bg }};color:{{ $txtColor }};font-size:12px;font-weight:700;cursor:{{ $isAvail?'pointer':'not-allowed' }};opacity:{{ $isAvail?'1':'0.45' }};transition:all 0.15s"

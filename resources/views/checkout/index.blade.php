@@ -37,9 +37,9 @@
         <div class="row g-3">
             @foreach ($parkedVehicles as $ticket)
                 <div class="col-md-4">
-                    <a href="{{ route('checkout.payment', $ticket->ticket_id) }}" class="card-ios card-ios-p d-block" style="transition:all 0.15s">
+                    <div class="card-ios card-ios-p" style="transition:all 0.15s">
                         <div class="d-flex justify-content-between align-items-start">
-                            <div>
+                            <div style="cursor:pointer;flex:1" onclick="window.location='{{ route('checkout.payment', $ticket->ticket_id) }}'">
                                 <div style="font-size:16px;font-weight:700;color:var(--label)">{{ $ticket->vehicle->plate_number ?? 'No plate' }}</div>
                                 <x-type-badge :type="$ticket->vehicle->vehicle_type" />
                                 <div style="font-size:12px;color:var(--gray);margin-top:6px">
@@ -50,9 +50,27 @@
                                     <div style="font-size:11px;color:var(--gray2);margin-top:2px"><i class="bi bi-person-fill me-1"></i>{{ $ticket->staff->full_name }}</div>
                                 @endif
                             </div>
-                            <div style="font-size:20px;font-weight:800;color:var(--blue)">${{ number_format($ticket->calculated_fee,2) }}</div>
+                            <div class="text-end" style="flex-shrink:0;margin-left:12px">
+                                <div style="font-size:20px;font-weight:800;color:var(--blue);cursor:pointer" onclick="window.location='{{ route('checkout.payment', $ticket->ticket_id) }}'">
+                                    ${{ number_format($ticket->calculated_fee,2) }}
+                                </div>
+                                @if(auth()->user()->isAdmin())
+                                    <form method="POST" action="{{ route('tickets.cancel', $ticket->ticket_id) }}" id="cancel-{{ $ticket->ticket_id }}">
+                                        @csrf
+                                    </form>
+                                    <button type="button" class="ios-btn btn-danger-ios btn-sm-ios mt-2"
+                                        data-bs-toggle="modal" data-bs-target="#confirmModal"
+                                        data-title="Cancel Ticket"
+                                        data-message="Cancel ticket {{ $ticket->ticket_id }} for {{ $ticket->vehicle->plate_number ?? 'this vehicle' }}? The slot will be freed."
+                                        data-form-id="cancel-{{ $ticket->ticket_id }}"
+                                        data-action="Cancel Ticket"
+                                        data-danger="true">
+                                        <i class="bi bi-x-circle me-1"></i> Cancel
+                                    </button>
+                                @endif
+                            </div>
                         </div>
-                    </a>
+                    </div>
                 </div>
             @endforeach
         </div>

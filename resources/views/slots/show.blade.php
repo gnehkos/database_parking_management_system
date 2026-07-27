@@ -1,143 +1,224 @@
-<x-layout title="Slot {{ $slot->slot_number }}">
-@php
-$zoneColors = [
-    'car'        => ['bg'=>'#e8f1ff','border'=>'#007aff','color'=>'#007aff','label'=>'Car'],
-    'motorcycle' => ['bg'=>'#e8f9ee','border'=>'#34c759','color'=>'#34c759','label'=>'Motorcycle'],
-    'tricycle'   => ['bg'=>'#f3eaff','border'=>'#af52de','color'=>'#af52de','label'=>'Tricycle'],
-    'bike'       => ['bg'=>'#fff3e0','border'=>'#ff9500','color'=>'#ff9500','label'=>'Bike'],
-];
-$vc = $zoneColors[$slot->zone->vehicle_type] ?? $zoneColors['car'];
-$statusColor = match($slot->real_status) { 'occupied'=>'var(--red)', 'maintenance'=>'var(--orange)', default=>'var(--green)' };
-$statusBg    = match($slot->real_status) { 'occupied'=>'rgba(255,59,48,0.1)', 'maintenance'=>'rgba(255,149,0,0.1)', default=>'rgba(52,199,89,0.1)' };
-$slotBg      = match($slot->real_status) { 'occupied'=>'linear-gradient(135deg,#ff3b30,#c0392b)', 'maintenance'=>'linear-gradient(135deg,#ff9500,#e67e22)', default=>'linear-gradient(135deg,'.$vc['color'].','.$vc['color'].'cc)' };
-@endphp
+@extends('components.layout')
 
-<div class="d-flex align-items-center gap-3 mb-4">
-    <a href="{{ route('slots.index') }}" class="ios-btn btn-ghost btn-sm-ios"><i class="bi bi-chevron-left"></i></a>
-    <div class="page-title" style="font-size:22px">Slot {{ $slot->slot_number }}</div>
-    <span class="pill" style="background:{{ $statusBg }};color:{{ $statusColor }}">{{ ucfirst($slot->real_status) }}</span>
-    <span class="pill" style="background:{{ $vc['bg'] }};color:{{ $vc['color'] }}">{{ $vc['label'] }} Zone</span>
+@section('title', 'Slot ' . $slot->slot_number)
+
+@section('content')
+
+{{-- Back --}}
+<div style="margin-bottom:1.5rem">
+    <a href="{{ route('slots.index') }}" style="display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:var(--blue)">
+        <i class="bi bi-arrow-left"></i> Slot Map
+    </a>
 </div>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div style="background:{{ $slotBg }};border-radius:20px;padding:32px;text-align:center;color:#fff;position:relative;overflow:hidden">
-            <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.08)"></div>
-            <div style="position:absolute;bottom:-30px;left:-10px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.06)"></div>
-            <div style="font-size:52px;font-weight:900;letter-spacing:-2px;line-height:1;position:relative">{{ $slot->slot_number }}</div>
-            <div style="font-size:13px;font-weight:600;opacity:0.85;margin-top:8px;text-transform:uppercase;letter-spacing:0.5px">{{ $vc['label'] }} Zone</div>
-            <div style="font-size:11px;opacity:0.7;margin-top:4px">{{ $slot->zone->zone_name }}</div>
+@if (session('success'))
+    <div class="alert-ios alert-success-ios" style="margin-bottom:16px;display:flex;align-items:center;gap:10px">
+        <i class="bi bi-check-circle-fill"></i> {{ session('success') }}
+    </div>
+@endif
+
+@if (session('error'))
+    <div class="alert-ios alert-danger-ios" style="margin-bottom:16px;display:flex;align-items:center;gap:10px">
+        <i class="bi bi-exclamation-circle-fill"></i> {{ session('error') }}
+    </div>
+@endif
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+
+    {{-- Left: Slot identity --}}
+    <div class="card-ios card-ios-p">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px">
+            <div>
+                <div style="font-size:36px;font-weight:800;color:var(--label);line-height:1;letter-spacing:-0.5px">
+                    {{ $slot->slot_number }}
+                </div>
+                <div style="font-size:13px;color:var(--gray);margin-top:6px;display:flex;align-items:center;gap:6px">
+                    <i class="bi bi-geo-alt" style="font-size:12px"></i>
+                    {{ $slot->zone->zone_name ?? '—' }}
+                </div>
+            </div>
+            @if ($realStatus === 'available')
+                <span class="pill pill-green" style="padding:6px 14px;font-size:13px;flex-shrink:0">
+                    <i class="bi bi-circle-fill" style="font-size:8px;margin-right:5px"></i>Available
+                </span>
+            @elseif ($realStatus === 'occupied')
+                <span class="pill pill-red" style="padding:6px 14px;font-size:13px;flex-shrink:0">
+                    <i class="bi bi-circle-fill" style="font-size:8px;margin-right:5px"></i>Occupied
+                </span>
+            @else
+                <span class="pill pill-orange" style="padding:6px 14px;font-size:13px;flex-shrink:0">
+                    <i class="bi bi-tools" style="font-size:11px;margin-right:5px"></i>Maintenance
+                </span>
+            @endif
+        </div>
+
+        <div style="height:0.5px;background:var(--gray5);margin-bottom:16px"></div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div>
+                <div style="font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Zone</div>
+                <div style="font-size:22px;font-weight:700;color:var(--label)">{{ $slot->zone->zone_code ?? '—' }}</div>
+            </div>
+            <div>
+                <div style="font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Type</div>
+                <div style="margin-top:4px">
+                    <span class="type-badge type-badge-{{ $slot->zone->vehicle_type ?? 'car' }}">
+                        {{ ucfirst($slot->zone->vehicle_type ?? '—') }}
+                    </span>
+                </div>
+            </div>
+            <div>
+                <div style="font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Total Uses</div>
+                <div style="font-size:22px;font-weight:700;color:var(--label)">{{ $totalUses }}</div>
+            </div>
         </div>
     </div>
-    <div class="col-md-8">
-        @if ($activeTicket)
-            <div style="border:2px solid var(--red);border-radius:16px;padding:20px;background:rgba(255,59,48,0.03);margin-bottom:12px">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div>
-                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--red);margin-bottom:6px"><i class="bi bi-record-circle-fill me-1"></i>Currently Parked</div>
-                        <div style="font-size:22px;font-weight:800">{{ $activeTicket->vehicle->plate_number ?? 'No plate' }}</div>
-                        <x-type-badge :type="$activeTicket->vehicle->vehicle_type" />
-                    </div>
-                    <div class="d-flex flex-column gap-2">
-                        <a href="{{ route('checkout.payment', $activeTicket->ticket_id) }}" class="ios-btn btn-sm-ios" style="background:var(--red);color:#fff">
-                            <i class="bi bi-arrow-up-right-circle-fill me-1"></i>Check Out
-                        </a>
-                        @if(auth()->user()->isAdmin())
-                            <button class="ios-btn btn-danger-ios btn-sm-ios" data-bs-toggle="modal" data-bs-target="#confirmModal"
-                                data-title="Cancel Ticket"
-                                data-message="Cancel ticket {{ $activeTicket->ticket_id }} and free this slot? No payment will be recorded."
-                                data-form-id="cancel-ticket-{{ $activeTicket->ticket_id }}"
-                                data-action="Cancel Ticket" data-danger="1">
-                                <i class="bi bi-x-circle-fill me-1"></i>Void
-                            </button>
-                            <form id="cancel-ticket-{{ $activeTicket->ticket_id }}" method="POST" action="{{ route('tickets.cancel', $activeTicket->ticket_id) }}" style="display:none">@csrf</form>
-                        @endif
-                    </div>
-                </div>
-                <div class="row g-2">
-                    @php
-                        $dur = \Carbon\Carbon::parse($activeTicket->entry_time)->diff(now());
-                        $durStr = ($dur->days ? $dur->days.'d ' : '').$dur->h.'h '.$dur->i.'m';
-                        $hours = \Carbon\Carbon::parse($activeTicket->entry_time)->diffInMinutes(now()) / 60;
-                        $estFee = $activeTicket->feeRate->calculateFee($hours);
-                    @endphp
-                    @foreach ([
-                        ['bi-hash','Ticket ID',$activeTicket->ticket_id],
-                        ['bi-clock-fill','Parked Since',\Carbon\Carbon::parse($activeTicket->entry_time)->format('M d, g:i A')],
-                        ['bi-stopwatch-fill','Duration',$durStr],
-                        ['bi-banknote','Est. Fee','$'.number_format($estFee,2)],
-                    ] as [$icon,$lbl,$val])
-                        <div class="col-6">
-                            <div style="background:rgba(255,59,48,0.06);border-radius:10px;padding:10px 12px">
-                                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--red);margin-bottom:4px"><i class="bi {{ $icon }} me-1"></i>{{ $lbl }}</div>
-                                <div style="font-size:14px;font-weight:700">{{ $val }}</div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-                @if(auth()->user()->isAdmin() && $activeTicket->staff)
-                    <div style="font-size:12px;color:var(--gray);margin-top:12px"><i class="bi bi-person-fill me-1"></i>Checked in by {{ $activeTicket->staff->full_name }}</div>
-                @endif
-            </div>
+
+    {{-- Right: Actions --}}
+    <div class="card-ios card-ios-p" style="display:flex;flex-direction:column;gap:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">
+            Actions
+        </div>
+
+        {{-- Maintenance toggle --}}
+        @if ($realStatus !== 'occupied')
+            <form method="POST" action="{{ route('slots.updateStatus', $slot->slot_id) }}" id="statusForm">
+                @csrf
+                @method('PATCH')
+            </form>
+            @if ($realStatus === 'maintenance')
+                <button type="button"
+                    class="ios-btn btn-primary-ios"
+                    style="width:100%;justify-content:center;gap:8px"
+                    data-bs-toggle="modal" data-bs-target="#confirmModal"
+                    data-title="Mark as Available"
+                    data-message="Mark {{ $slot->slot_number }} as available? Staff will be able to check vehicles into this slot."
+                    data-form-id="statusForm"
+                    data-action="Mark Available">
+                    <i class="bi bi-check-circle"></i> Mark as Available
+                </button>
+            @else
+                <button type="button"
+                    class="ios-btn"
+                    style="width:100%;justify-content:center;gap:8px;background:rgba(255,149,0,0.12);color:var(--orange)"
+                    data-bs-toggle="modal" data-bs-target="#confirmModal"
+                    data-title="Mark as Maintenance"
+                    data-message="Mark {{ $slot->slot_number }} as under maintenance? It will be hidden from check-in until resolved."
+                    data-form-id="statusForm"
+                    data-action="Mark Maintenance"
+                    data-danger="true">
+                    <i class="bi bi-tools"></i> Mark as Maintenance
+                </button>
+            @endif
         @else
-            <div style="border:2px solid var(--green);border-radius:16px;padding:24px;background:rgba(52,199,89,0.04);text-align:center;margin-bottom:12px">
-                <div style="width:52px;height:52px;border-radius:50%;background:rgba(52,199,89,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
-                    <i class="bi bi-check-circle-fill" style="color:var(--green);font-size:22px"></i>
-                </div>
-                <div style="font-size:16px;font-weight:700;color:var(--green)">Slot Available</div>
-                <div style="font-size:13px;color:var(--gray);margin-top:4px">Ready to park a {{ $vc['label'] }}</div>
-                <a href="{{ route('checkin.index') }}" class="ios-btn btn-sm-ios mt-3 d-inline-flex" style="background:var(--green);color:#fff">
-                    <i class="bi bi-arrow-down-right-circle-fill me-1"></i>Check In Here
-                </a>
+            <div style="padding:12px;background:rgba(255,59,48,0.06);border-radius:10px;font-size:13px;color:var(--gray);text-align:center">
+                <i class="bi bi-lock-fill" style="margin-right:4px"></i>
+                Cannot change status while occupied
             </div>
         @endif
 
-        @if ($slot->real_status !== 'occupied')
-            <div class="card-ios card-ios-p">
-                <div class="section-hdr">Update Status</div>
-                <form method="POST" action="{{ route('slots.updateStatus', $slot->slot_id) }}" class="d-flex gap-2 mt-2">
-                    @csrf @method('PATCH')
-                    <select name="status" class="ios-input" style="max-width:200px">
-                        <option value="available" {{ $slot->status==='available'?'selected':'' }}>Available</option>
-                        <option value="maintenance" {{ $slot->status==='maintenance'?'selected':'' }}>Under Maintenance</option>
-                    </select>
-                    <button class="ios-btn btn-primary-ios btn-sm-ios">Update</button>
-                </form>
-            </div>
+        {{-- Checkout shortcut --}}
+        @if ($realStatus === 'occupied' && $activeTicket)
+            <a href="{{ route('checkout.index', ['ticket_search' => $activeTicket->ticket_id]) }}"
+               class="btn-primary-ios ios-btn"
+               style="width:100%;justify-content:center;gap:8px">
+                <i class="bi bi-box-arrow-right"></i> Process Check-Out
+            </a>
         @endif
+
+        {{-- Slot map link --}}
+        <a href="{{ route('slots.index') }}"
+           class="ios-btn btn-ghost"
+           style="width:100%;justify-content:center;gap:8px">
+            <i class="bi bi-grid-3x3-gap"></i> Back to Slot Map
+        </a>
     </div>
 </div>
 
-<div class="card-ios card-ios-p">
-    <div class="d-flex align-items-center gap-2 mb-3">
-        <i class="bi bi-clock-history" style="color:var(--blue)"></i>
-        <span style="font-size:16px;font-weight:700">Usage History</span>
+{{-- Currently parked --}}
+@if ($realStatus === 'occupied' && $activeTicket)
+    <div style="font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;padding:0 2px">
+        Currently Parked
     </div>
-    @forelse ($usageHistory as $ticket)
-        @php $d=\Carbon\Carbon::parse($ticket->entry_time)->diff(\Carbon\Carbon::parse($ticket->exit_time??now()));$dur=($d->days?$d->days.'d ':'').$d->h.'h '.$d->i.'m'; @endphp
-        <div class="d-flex justify-content-between align-items-center py-3 {{ !$loop->last?'border-bottom':'' }}" style="border-color:var(--gray5)!important">
-            <div class="d-flex align-items-center gap-3">
-                <div style="width:36px;height:36px;border-radius:10px;background:var(--gray6);display:flex;align-items:center;justify-content:center">
-                    <i class="bi bi-clock-fill" style="color:var(--gray);font-size:14px"></i>
+    <div class="card-ios card-ios-p" style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:44px;height:44px;border-radius:12px;background:rgba(0,122,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <i class="bi bi-car-front-fill" style="font-size:20px;color:var(--blue)"></i>
                 </div>
                 <div>
-                    <div style="font-size:14px;font-weight:600">{{ $ticket->vehicle->plate_number ?? 'No plate' }}
-                        <span class="pill {{ $ticket->status==='completed'?'pill-blue':'pill-gray' }} ms-1">{{ ucfirst($ticket->status) }}</span>
+                    <div style="font-size:18px;font-weight:700;color:var(--label)">
+                        {{ $activeTicket->vehicle->plate_number ?? 'No Plate' }}
                     </div>
-                    <div style="font-size:12px;color:var(--gray)">
-                        {{ \Carbon\Carbon::parse($ticket->entry_time)->format('M d, g:i A') }}
-                        @if($ticket->exit_time) &rarr; {{ \Carbon\Carbon::parse($ticket->exit_time)->format('g:i A') }} @endif
-                        &middot; {{ $dur }}
+                    <div style="font-size:12px;color:var(--gray);margin-top:2px">
+                        {{ ucfirst($activeTicket->vehicle->vehicle_type ?? '') }}
                     </div>
                 </div>
             </div>
-            @if($ticket->payment)<span style="font-weight:700">${{ number_format($ticket->payment->total_fee,2) }}</span>@endif
+            <span class="pill pill-blue" style="font-size:12px">{{ $activeTicket->ticket_id }}</span>
         </div>
-    @empty
-        <div class="text-center py-4" style="color:var(--gray)">
-            <i class="bi bi-clock-history d-block mb-2" style="font-size:24px;color:var(--gray2)"></i>
-            No usage history for this slot.
+
+        @php
+            $mins  = \Carbon\Carbon::parse($activeTicket->entry_time)->diffInMinutes(now());
+            $hours = $mins / 60;
+            $h     = intdiv($mins, 60);
+            $m     = $mins % 60;
+            $fee   = $activeTicket->feeRate ? $activeTicket->feeRate->calculateFee($hours) : 0;
+        @endphp
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+            <div style="background:var(--bg);border-radius:12px;padding:12px 14px">
+                <div style="font-size:11px;color:var(--gray);margin-bottom:4px">Entry Time</div>
+                <div style="font-size:14px;font-weight:600;color:var(--label)">
+                    {{ \Carbon\Carbon::parse($activeTicket->entry_time)->format('H:i') }}
+                </div>
+                <div style="font-size:11px;color:var(--gray);margin-top:1px">
+                    {{ \Carbon\Carbon::parse($activeTicket->entry_time)->format('d M') }}
+                </div>
+            </div>
+            <div style="background:var(--bg);border-radius:12px;padding:12px 14px">
+                <div style="font-size:11px;color:var(--gray);margin-bottom:4px">Duration</div>
+                <div style="font-size:14px;font-weight:600;color:var(--label)">
+                    {{ $h > 0 ? $h . 'h ' : '' }}{{ $m }}m
+                </div>
+                <div style="font-size:11px;color:var(--gray);margin-top:1px">
+                    {{ $hours < ($activeTicket->feeRate->threshold_hours ?? 5) ? 'Short stay' : 'Long stay' }}
+                </div>
+            </div>
+            <div style="background:var(--bg);border-radius:12px;padding:12px 14px">
+                <div style="font-size:11px;color:var(--gray);margin-bottom:4px">Est. Fee</div>
+                <div style="font-size:14px;font-weight:600;color:var(--green)">${{ number_format($fee, 2) }}</div>
+                <div style="font-size:11px;color:var(--gray);margin-top:1px">
+                    {{ number_format($fee * 4000) }} KHR
+                </div>
+            </div>
+            <div style="background:var(--bg);border-radius:12px;padding:12px 14px">
+                <div style="font-size:11px;color:var(--gray);margin-bottom:4px">Staff</div>
+                <div style="font-size:13px;font-weight:500;color:var(--label)">
+                    {{ $activeTicket->staff->full_name ?? '—' }}
+                </div>
+            </div>
         </div>
-    @endforelse
-</div>
-</x-layout>
+    </div>
+@endif
+
+{{-- Maintenance notice --}}
+@if ($realStatus === 'maintenance')
+    <div style="background:rgba(255,149,0,0.08);border:1px solid rgba(255,149,0,0.2);border-radius:var(--radius);padding:16px 18px;display:flex;align-items:flex-start;gap:12px">
+        <i class="bi bi-tools" style="font-size:18px;color:var(--orange);flex-shrink:0;margin-top:1px"></i>
+        <div>
+            <div style="font-size:14px;font-weight:600;color:var(--orange);margin-bottom:3px">Under Maintenance</div>
+            <div style="font-size:13px;color:var(--gray)">This slot is excluded from check-in until marked available again. Use the button above to resolve.</div>
+        </div>
+    </div>
+@endif
+
+{{-- Available notice --}}
+@if ($realStatus === 'available')
+    <div style="background:rgba(52,199,89,0.08);border:1px solid rgba(52,199,89,0.2);border-radius:var(--radius);padding:16px 18px;display:flex;align-items:center;gap:12px">
+        <i class="bi bi-check-circle-fill" style="font-size:18px;color:var(--green);flex-shrink:0"></i>
+        <div style="font-size:14px;font-weight:500;color:#1a7a30">Slot is free and ready for check-in</div>
+    </div>
+@endif
+
+@endsection
