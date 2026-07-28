@@ -13,24 +13,24 @@ use Illuminate\Support\Facades\DB;
 class CheckInController extends Controller
 {
     public function index()
-{
-    $zones = ParkingZone::with('slots')->get();
+    {
+        $zones = ParkingZone::with('slots')->get();
 
-    $occupiedSlotIds = Ticket::where('status', 'active')
-        ->pluck('slot_id')
-        ->toArray();
+        $occupiedSlotIds = Ticket::where('status', 'active')
+            ->pluck('slot_id')
+            ->toArray();
 
-    $freeByType = [];
-    foreach ($zones as $zone) {
-        $free = $zone->slots->filter(fn($s) =>
-            $s->status !== 'maintenance' &&
-            !in_array($s->slot_id, $occupiedSlotIds)
-        )->count();
-        $freeByType[$zone->vehicle_type] = ($freeByType[$zone->vehicle_type] ?? 0) + $free;
+        $freeByType = [];
+        foreach ($zones as $zone) {
+            $free = $zone->slots->filter(fn($s) =>
+                $s->status !== 'maintenance' &&
+                !in_array($s->slot_id, $occupiedSlotIds)
+            )->count();
+            $freeByType[$zone->vehicle_type] = ($freeByType[$zone->vehicle_type] ?? 0) + $free;
+        }
+
+        return view('checkin.index', compact('freeByType'));
     }
-
-    return view('checkin.index', compact('freeByType'));
-}
 
     public function slotSelection(Request $request)
     {

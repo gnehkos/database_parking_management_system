@@ -27,7 +27,8 @@
                 </div>
                 <div style="font-size:12px;color:var(--gray);margin-top:6px">e.g. 2AB-1234</div>
             </div>
-            <div id="cF" style="display:none"><input type="text" name="plate_number" class="ios-input" placeholder="CUSTOM PLATE"></div>
+            <div id="cF" style="display:none"><input type="text" name="plate_number" id="customPlate" class="ios-input" placeholder="CUSTOM PLATE"></div>
+            <input type="hidden" name="plate_number" id="finalPlate">
             @if ($errors->any())<div class="alert-ios alert-danger-ios mt-3">{{ $errors->first() }}</div>@endif
             <div class="d-flex gap-3 mt-4">
                 <a href="{{ route('vehicles.index') }}" class="ios-btn btn-ghost flex-fill text-center">Cancel</a>
@@ -71,12 +72,24 @@
                 const vt = document.querySelector('input[name=vehicle_type]:checked');
                 if (!vt) { alert('Please select a vehicle type.'); return; }
                 const pt = document.querySelector('input[name=plate_type]:checked').value;
-                if (vt.value !== 'bike' && pt === 'structured') {
+
+                if (vt.value === 'bike') {
+                    document.getElementById('finalPlate').value = '';
+                    document.getElementById('vehicleForm').submit();
+                    return;
+                }
+
+                if (pt === 'structured') {
+                    const prefix = document.getElementById('platePrefix').value;
                     const l = document.getElementById('plateLetters').value;
                     const d = document.getElementById('plateDigits').value;
                     if (!/^[A-Z]{1,2}$/.test(l)) { alert('Letters must be A-Z only (1-2 characters).'); return; }
                     if (!/^\d{4}$/.test(d)) { alert('Digits must be exactly 4 numbers.'); return; }
+                    document.getElementById('finalPlate').value = prefix + l + '-' + d;
+                } else {
+                    document.getElementById('finalPlate').value = document.getElementById('customPlate').value;
                 }
+
                 document.getElementById('vehicleForm').submit();
             }
         </script>
