@@ -35,7 +35,7 @@ class ReportController extends Controller
             ? $start->format('M d, Y') . ' - ' . $now->format('M d, Y')
             : 'All time';
 
-        $paymentQuery = Payment::where('payments.status', 'paid')
+        $paymentQuery = Payment::query()
             ->join('tickets', 'payments.ticket_id', '=', 'tickets.ticket_id')
             ->join('vehicles', 'tickets.vehicle_id', '=', 'vehicles.vehicle_id');
 
@@ -46,15 +46,13 @@ class ReportController extends Controller
             $paymentQuery->where('vehicles.vehicle_type', $typeFilter);
         }
 
-        $periodRevenue      = (clone $paymentQuery)->sum('payments.total_fee');
-        $totalTransactions  = (clone $paymentQuery)->count('payments.payment_id');
-        $avgPerSession      = $totalTransactions > 0 ? $periodRevenue / $totalTransactions : 0;
+        $periodRevenue     = (clone $paymentQuery)->sum('payments.total_fee');
+        $totalTransactions = (clone $paymentQuery)->count('payments.payment_id');
+        $avgPerSession     = $totalTransactions > 0 ? $periodRevenue / $totalTransactions : 0;
 
-       $todayRevenue = Payment::where('payments.status', 'paid')
-            ->whereDate('payments.paid_at', $now->toDateString())
-            ->sum('payments.total_fee');
+        $todayRevenue = Payment::whereDate('paid_at', $now->toDateString())->sum('total_fee');
 
-        $dailyRevenue = Payment::where('payments.status', 'paid')
+        $dailyRevenue = Payment::query()
             ->join('tickets', 'payments.ticket_id', '=', 'tickets.ticket_id')
             ->join('vehicles', 'tickets.vehicle_id', '=', 'vehicles.vehicle_id')
             ->when($start, fn($q) => $q->where('payments.paid_at', '>=', $start))
@@ -67,7 +65,6 @@ class ReportController extends Controller
 
         $vehicleTypeCounts = Ticket::join('vehicles', 'tickets.vehicle_id', '=', 'vehicles.vehicle_id')
             ->join('payments', 'tickets.ticket_id', '=', 'payments.ticket_id')
-            ->where('payments.status', 'paid')
             ->when($start, fn($q) => $q->where('payments.paid_at', '>=', $start))
             ->selectRaw('vehicles.vehicle_type, COUNT(tickets.ticket_id) as count')
             ->groupBy('vehicles.vehicle_type')
@@ -84,7 +81,7 @@ class ReportController extends Controller
                 (SELECT COALESCE(SUM(p.total_fee), 0)
                  FROM payments p
                  JOIN tickets t2 ON t2.ticket_id = p.ticket_id
-                 WHERE t2.vehicle_id = v.vehicle_id AND p.status = 'paid') AS total_spent
+                 WHERE t2.vehicle_id = v.vehicle_id) AS total_spent
             FROM vehicles v
             WHERE v.status = 'active'
             HAVING visit_count > 0
@@ -105,7 +102,7 @@ class ReportController extends Controller
         $typeFilter = $request->input('type', 'all');
         $start      = $this->getPeriodStart($period);
 
-        $payments = Payment::where('status', 'paid')
+        $payments = Payment::query()
             ->join('tickets', 'payments.ticket_id', '=', 'tickets.ticket_id')
             ->join('vehicles', 'tickets.vehicle_id', '=', 'vehicles.vehicle_id')
             ->leftJoin('parking_slots', 'tickets.slot_id', '=', 'parking_slots.slot_id')

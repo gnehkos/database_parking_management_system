@@ -33,8 +33,8 @@ class DashboardController extends Controller
         $maintenance = $allSlots->where('status', 'maintenance')->count();
         $available   = $totalSlots - $occupied - $maintenance;
 
-        $periodRevenue      = Payment::where('paid_at', '>=', $periodStart)->where('status', 'paid')->sum('total_fee');
-        $periodTransactions = Payment::where('paid_at', '>=', $periodStart)->where('status', 'paid')->count();
+        $periodRevenue      = Payment::where('paid_at', '>=', $periodStart)->sum('total_fee');
+        $periodTransactions = Payment::where('paid_at', '>=', $periodStart)->count();
 
         $trafficRaw = Ticket::whereDate('entry_time', $now->toDateString())
             ->selectRaw('HOUR(entry_time) as hour, COUNT(*) as count')

@@ -94,7 +94,6 @@ class CheckOutController extends Controller
                 'duration'       => round($hours, 2),
                 'total_fee'      => $fee,
                 'payment_method' => $request->payment_method,
-                'status'         => 'paid',
                 'paid_at'        => $now,
             ]);
 
@@ -120,25 +119,5 @@ class CheckOutController extends Controller
 
         return redirect()->route('slots.index')
             ->with('success', 'Ticket ' . $ticket->ticket_id . ' cancelled and slot freed.');
-    }
-
-    public function voidPayment(Request $request, $ticketId)
-    {
-        DB::transaction(function () use ($ticketId) {
-            $ticket  = Ticket::with('payment')->findOrFail($ticketId);
-            $payment = $ticket->payment;
-
-            if ($payment) {
-                $payment->update(['status' => 'voided']);
-            }
-
-            $ticket->update(['status' => 'active', 'exit_time' => null]);
-
-            ParkingSlot::where('slot_id', $ticket->slot_id)
-                ->update(['status' => 'occupied', 'updated_at' => now()]);
-        });
-
-        return redirect()->route('history.index')
-            ->with('success', 'Payment voided. Ticket reopened as active.');
     }
 }

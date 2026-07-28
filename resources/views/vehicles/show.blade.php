@@ -97,9 +97,6 @@
                 <div class="d-flex align-items-center gap-2">
                     @if($ticket->payment)
                         <span style="font-weight:700">${{ number_format($ticket->payment->total_fee,2) }}</span>
-                        @if($ticket->payment->status === 'voided')
-                            <span class="pill pill-red" style="font-size:10px">Voided</span>
-                        @endif
                     @endif
                     @if(auth()->user()->isAdmin())
                         <a href="{{ route('tickets.edit', $ticket->ticket_id) }}" class="ios-btn btn-ghost btn-sm-ios"><i class="bi bi-pencil-fill"></i></a>
