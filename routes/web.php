@@ -23,7 +23,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('vehicles', VehicleController::class)->parameters(['vehicles' => 'vehicle:vehicle_id']);
-    Route::delete('/vehicles/{vehicle:vehicle_id}/hard-delete', [VehicleController::class, 'hardDelete'])->name('vehicles.hardDelete');
 
     Route::get('/checkin', [CheckInController::class, 'index'])->name('checkin.index');
     Route::post('/checkin/slots', [CheckInController::class, 'slotSelection'])->name('checkin.slots');
@@ -36,7 +35,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/checkout/payment/{ticketId}', [CheckOutController::class, 'processPayment'])->name('checkout.process');
     Route::get('/checkout/complete/{ticketId}', [CheckOutController::class, 'complete'])->name('checkout.complete');
     Route::post('/tickets/{ticketId}/cancel', [CheckOutController::class, 'cancelTicket'])->name('tickets.cancel');
-    Route::post('/tickets/{ticketId}/void-payment', [CheckOutController::class, 'voidPayment'])->name('tickets.voidPayment');
     Route::post('/tickets/{ticketId}/correct-vehicle', [TicketController::class, 'correctVehicle'])->name('tickets.correctVehicle');
 
     Route::get('/slots', [SlotMapController::class, 'index'])->name('slots.index');
@@ -64,9 +62,5 @@ Route::middleware('auth')->group(function () {
         Route::patch('/staff/{staff:staff_id}/toggle-status', [StaffController::class, 'toggleStatus'])->name('staff.toggleStatus');
         Route::post('/staff/{staff:staff_id}/reset-password', [StaffController::class, 'resetPassword'])->name('staff.resetPassword');
         Route::delete('/staff/{staff:staff_id}/destroy', [StaffController::class, 'destroy'])->name('staff.destroy');
-
-        Route::get('/tickets/{ticketId}/edit', [TicketController::class, 'edit'])->name('tickets.edit');
-        Route::patch('/tickets/{ticketId}', [TicketController::class, 'update'])->name('tickets.update');
-        Route::delete('/tickets/{ticketId}', [TicketController::class, 'destroy'])->name('tickets.destroy');
     });
 });

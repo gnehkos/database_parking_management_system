@@ -55,7 +55,6 @@
                 <thead>
                     <tr>
                         <th>Ticket</th><th>Plate</th><th>Type</th><th>Slot</th><th>Entry</th><th>Exit</th><th>Duration</th><th>Fee</th><th>Status</th>
-                        @if(auth()->user()->isAdmin())<th>Staff</th><th></th>@endif
                     </tr>
                 </thead>
                 <tbody>
@@ -82,41 +81,15 @@
                             <td>
                                 @if($ticket->payment)
                                     <span style="font-weight:600">${{ number_format($ticket->payment->total_fee,2) }}</span>
-                                    @if(isset($ticket->payment->status) && $ticket->payment->status === 'voided')
-                                        <span class="pill pill-red ms-1" style="font-size:10px">Voided</span>
-                                    @endif
                                 @else
                                     -
                                 @endif
                             </td>
                             <td><span class="pill {{ $ticket->status==='active'?'pill-green':($ticket->status==='completed'?'pill-blue':($ticket->status==='cancelled'?'pill-red':'pill-gray')) }}">{{ ucfirst($ticket->status) }}</span></td>
-                            @if(auth()->user()->isAdmin())
-                                <td>
-                                    <div class="d-flex gap-1">
-                                        <a href="{{ route('tickets.edit', $ticket->ticket_id) }}" class="ios-btn btn-ghost btn-sm-ios">
-                                            <i class="bi bi-pencil-fill"></i>
-                                        </a>
-                                        @if($ticket->status === 'completed' && $ticket->payment && $ticket->payment->status === 'paid')
-                                            <form method="POST" action="{{ route('tickets.voidPayment', $ticket->ticket_id) }}" id="void-{{ $ticket->ticket_id }}">
-                                                @csrf
-                                            </form>
-                                            <button type="button" class="ios-btn btn-danger-ios btn-sm-ios"
-                                                data-bs-toggle="modal" data-bs-target="#confirmModal"
-                                                data-title="Void Payment"
-                                                data-message="Void payment for ticket {{ $ticket->ticket_id }}? This will reopen the ticket as active and re-occupy the slot."
-                                                data-form-id="void-{{ $ticket->ticket_id }}"
-                                                data-action="Void Payment"
-                                                data-danger="true">
-                                                <i class="bi bi-arrow-counterclockwise"></i>
-                                            </button>
-                                        @endif
-                                    </div>
-                                </td>
-                            @endif
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ auth()->user()->isAdmin()?11:9 }}">
+                            <td colspan="9">
                                 <div class="text-center py-5">
                                     <div style="width:52px;height:52px;border-radius:50%;background:var(--gray6);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
                                         <i class="bi bi-clock-history" style="font-size:22px;color:var(--gray2)"></i>
